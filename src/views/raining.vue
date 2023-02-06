@@ -16,13 +16,13 @@ let renderer: THREE.WebGLRenderer;
 let controls: any;
 let stats: any;
 let point: THREE.Points;
-const clock: THREE.Clock = new THREE.Clock();
+const pointCount: number = 5000;
 
 nextTick(() => {
   initCamera(canvas.value.clientWidth, canvas.value.clientHeight);
   initRenderer(canvas.value.clientWidth, canvas.value.clientHeight);
   initLight();
-  initAxesHelper();
+  // initAxesHelper();
   initControls();
   render();
   initStats();
@@ -81,9 +81,15 @@ const render = (): void => {
   if (stats) {
     stats.update();
   }
-  const time = clock.getElapsedTime();
   if (point) {
-    point.rotation.x = 0.3 * time
+    const positions = (point.geometry.getAttribute("position") as any).array;
+    for (let i = 0; i < pointCount * 3; i += 3) {
+      positions[i + 1] -= Math.random() * 0.5;
+      if (positions[i + 1] < -40) {
+        positions[i + 1] = 40;
+      }
+    }
+    point.geometry.getAttribute("position").needsUpdate = true;
   }
   requestAnimationFrame(render);
 };
@@ -91,7 +97,6 @@ const render = (): void => {
 const createRaining = (): void => {
   let geometry: THREE.BufferGeometry = new THREE.BufferGeometry();
 
-  let pointCount = 5000;
   let positions: Float32Array = new Float32Array(pointCount * 3);
   for (let i = 0; i < pointCount * 3; i++) {
     positions[i] = (Math.random() - 0.5) * 100;
@@ -103,7 +108,7 @@ const createRaining = (): void => {
   let material: THREE.PointsMaterial = new THREE.PointsMaterial({
     size: 1,
     transparent: true,
-    opacity: 1,
+    opacity: 0.5,
     vertexColors: false,
     sizeAttenuation: true,
     color: 0xededed,
@@ -111,7 +116,7 @@ const createRaining = (): void => {
     depthWrite: false,
     map: rainTexture,
     alphaMap: rainTexture,
-    blending: THREE.AdditiveBlending
+    blending: THREE.AdditiveBlending,
   });
 
   point = new THREE.Points(geometry, material);
