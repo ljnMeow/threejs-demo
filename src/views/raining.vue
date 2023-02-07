@@ -27,7 +27,6 @@ nextTick(() => {
   render();
   initStats();
   initGui();
-  // createRaining();
 });
 
 const initCamera = (width: number, height: number): void => {
