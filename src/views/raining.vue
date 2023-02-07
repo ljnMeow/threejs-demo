@@ -22,7 +22,6 @@ const pointCount: number = 5000;
 nextTick(() => {
   initCamera(canvas.value.clientWidth, canvas.value.clientHeight);
   initRenderer(canvas.value.clientWidth, canvas.value.clientHeight);
-  initLight();
   // initAxesHelper();
   initControls();
   render();
@@ -38,7 +37,7 @@ const initCamera = (width: number, height: number): void => {
 };
 
 const initRenderer = (width: number, height: number): void => {
-  renderer = new THREE.WebGL1Renderer();
+  renderer = new THREE.WebGLRenderer();
   renderer.setSize(width, height);
   canvas.value.appendChild(renderer.domElement);
   renderer.render(scene, camera);
@@ -47,17 +46,6 @@ const initRenderer = (width: number, height: number): void => {
 const initStats = (): void => {
   stats = new Stats();
   canvas.value.appendChild(stats.dom);
-};
-
-const initLight = (): void => {
-  let ambientLight: THREE.AmbientLight = new THREE.AmbientLight(0x404040);
-  scene.add(ambientLight);
-
-  let directionalLight: THREE.DirectionalLight = new THREE.DirectionalLight(
-    0xffffff
-  );
-  directionalLight.position.set(1, 1, 1);
-  scene.add(directionalLight);
 };
 
 const initAxesHelper = (): void => {
