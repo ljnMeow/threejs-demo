@@ -5,6 +5,7 @@
 <script lang="ts" setup>
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
+import dat from "dat.gui";
 import Stats from "stats.js";
 import { nextTick, ref } from "vue";
 import rainingPng from "../assets/rain.png";
@@ -26,7 +27,8 @@ nextTick(() => {
   initControls();
   render();
   initStats();
-  createRaining();
+  initGui();
+  // createRaining();
 });
 
 const initCamera = (width: number, height: number): void => {
@@ -84,7 +86,7 @@ const render = (): void => {
   if (point) {
     const positions = (point.geometry.getAttribute("position") as any).array;
     for (let i = 0; i < pointCount * 3; i += 3) {
-      positions[i + 1] -= Math.random() * 0.5;
+      positions[i + 1] -= Math.random() * 1;
       if (positions[i + 1] < -40) {
         positions[i + 1] = 40;
       }
@@ -94,7 +96,50 @@ const render = (): void => {
   requestAnimationFrame(render);
 };
 
-const createRaining = (): void => {
+const initGui = (): void => {
+  const datGui = new dat.GUI();
+  const guiConfig = {
+    size: 1,
+    transparent: true,
+    opacity: 0.5,
+    vertexColors: false,
+    sizeAttenuation: true,
+    color: 0xededed,
+    rotateSystem: false,
+    reDraw: () => {
+      if (point) {
+        scene.remove(point);
+      }
+      createRaining(
+        guiConfig.size,
+        guiConfig.transparent,
+        guiConfig.opacity,
+        guiConfig.vertexColors,
+        guiConfig.sizeAttenuation,
+        guiConfig.color,
+      );
+      controls.autoRotate = guiConfig.rotateSystem;
+    },
+  };
+  datGui.add(guiConfig, "size", 0.1, 3).onChange(guiConfig.reDraw);
+  datGui.add(guiConfig, "transparent").onChange(guiConfig.reDraw);
+  datGui.add(guiConfig, "opacity", 0.1, 1).onChange(guiConfig.reDraw);
+  datGui.add(guiConfig, "vertexColors").onChange(guiConfig.reDraw);
+  datGui.add(guiConfig, "sizeAttenuation").onChange(guiConfig.reDraw);
+  datGui.addColor(guiConfig, "color").onChange(guiConfig.reDraw);
+  datGui.add(guiConfig, "rotateSystem").onChange(guiConfig.reDraw);
+
+  guiConfig.reDraw();
+};
+
+const createRaining = (
+  size: number,
+  transparent: boolean,
+  opacity: number,
+  vertexColors: boolean,
+  sizeAttenuation: boolean,
+  color: number,
+): void => {
   let geometry: THREE.BufferGeometry = new THREE.BufferGeometry();
 
   let positions: Float32Array = new Float32Array(pointCount * 3);
@@ -106,12 +151,12 @@ const createRaining = (): void => {
   let textureLoader: THREE.TextureLoader = new THREE.TextureLoader();
   let rainTexture: THREE.Texture = textureLoader.load(rainingPng);
   let material: THREE.PointsMaterial = new THREE.PointsMaterial({
-    size: 1,
-    transparent: true,
-    opacity: 0.5,
-    vertexColors: false,
-    sizeAttenuation: true,
-    color: 0xededed,
+    size: size,
+    transparent: transparent,
+    opacity: opacity,
+    vertexColors: vertexColors,
+    sizeAttenuation: sizeAttenuation,
+    color: color,
     depthTest: true,
     depthWrite: false,
     map: rainTexture,

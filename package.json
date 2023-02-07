@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@types/dat.gui": "^0.7.7",
     "@types/stats.js": "^0.17.0",
     "dat.gui": "^0.7.9",
     "gsap": "^3.11.4",
