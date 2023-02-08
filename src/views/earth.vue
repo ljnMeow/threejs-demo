@@ -78,14 +78,8 @@ const render = (): void => {
 };
 
 const initLight = (): void => {
-  let ambientLight: THREE.AmbientLight = new THREE.AmbientLight(0x404040);
+  let ambientLight: THREE.AmbientLight = new THREE.AmbientLight();
   scene.add(ambientLight);
-
-  let directionalLight: THREE.DirectionalLight = new THREE.DirectionalLight(
-    0xffffff
-  );
-  directionalLight.position.set(1, 1, 1);
-  scene.add(directionalLight);
 };
 
 const createStar = (): void => {
@@ -134,33 +128,33 @@ const createEarth = () => {
       const cloudPng: string = new URL('../assets/model/earth/texture/Clouds_2K.png', import.meta.url).href
       textureLoader.load(cloudPng, resolve, undefined, reject)
     })
-    const cloudMaterial = new THREE.MeshBasicMaterial({ map: cloudTexture });
 
     const atmosphereTexture: THREE.Texture = await new Promise((resolve, reject) => {
       const atmospherePng: string = new URL('../assets/model/earth/texture/Bump_2K.png', import.meta.url).href
       textureLoader.load(atmospherePng, resolve, undefined, reject)
     })
-    const atmosphereMaterial = new THREE.MeshBasicMaterial({ map: atmosphereTexture });
-
 
     const earthTexture: THREE.Texture = await new Promise((resolve, reject) => {
       const earthPng: string = new URL('../assets/model/earth/texture/Diffuse_2K.png', import.meta.url).href
       textureLoader.load(earthPng, resolve, undefined, reject)
     })
-    const earthMaterial = new THREE.MeshBasicMaterial({ map: earthTexture });
 
     for(let i = 0; i < obj.children.length; i++) {
-      if(obj.children[i].name === 'Clouds_Cube.000') {
-        (obj.children[i] as any).material = cloudMaterial
+      let mesh: any = obj.children[i]
+      if(mesh.name === 'Clouds_Cube.000') {
+        mesh.material.map = cloudTexture
+        mesh.material.blending = THREE.AdditiveBlending
+        mesh.material.depthTest = false
       }
-      if(obj.children[i].name === 'Atmosphere_Cube.001') {
-        (obj.children[i] as any).material = atmosphereMaterial
+      if(mesh.name === 'Atmosphere_Cube.001') {
+        mesh.material.map = atmosphereTexture
+        mesh.material.blending = THREE.AdditiveBlending
       }
-      if(obj.children[i].name === 'Earth_Cube.002') {
-        (obj.children[i] as any).material = earthMaterial
+      if(mesh.name === 'Earth_Cube.002') {
+        mesh.material.map = earthTexture
       }
     }
-
+    obj.scale.set(10, 10, 10)
     scene.add(obj)
   })
 }
