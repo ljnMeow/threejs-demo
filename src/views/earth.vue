@@ -5,14 +5,14 @@
 <script lang="ts" setup>
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
-import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 import Stats from "stats.js";
 import { nextTick, ref } from "vue";
+import { getAssetsFile } from "../utils";
 
 import starPng from "../assets/star.png";
 
 const canvas = ref<any>(null);
-let scene: THREE.Scene = new THREE.Scene();
+let scene: THREE.Scene;
 let camera: THREE.PerspectiveCamera;
 let renderer: THREE.WebGLRenderer;
 let controls: any;
@@ -20,8 +20,10 @@ let stats: any;
 let stars: THREE.Points;
 const starCount: number = 10000;
 const textureLoader: THREE.TextureLoader = new THREE.TextureLoader();
+const earthGroup: THREE.Group = new THREE.Group();
 
 nextTick(() => {
+  initScene();
   initCamera(canvas.value.clientWidth, canvas.value.clientHeight);
   initRenderer(canvas.value.clientWidth, canvas.value.clientHeight);
   initControls();
@@ -31,11 +33,18 @@ nextTick(() => {
   initLight();
   createStar();
   createEarth();
+  createSatellite();
 });
 
+const initScene = (): void => {
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color( 0x020924 );
+  scene.fog = new THREE.Fog( 0x020924, 200, 1000 );
+}
+
 const initCamera = (width: number, height: number): void => {
-  camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
-  camera.position.set(0, 0, 100);
+  camera = new THREE.PerspectiveCamera(75, width / height, 1, 1000);
+  camera.position.set(0, 0, 14);
   scene.add(camera);
 };
 
@@ -66,6 +75,8 @@ const initControls = (): void => {
   controls.autoRotate = false;
   //是否开启右键拖拽
   controls.enablePan = true;
+  //摄像机缩放的速度
+  controls.zoomSpeed = 1.8;
 };
 
 const render = (): void => {
@@ -121,42 +132,55 @@ const createStar = (): void => {
 };
 
 const createEarth = () => {
-  const loader: OBJLoader = new OBJLoader();
-  const modal: string = new URL('../assets/model/earth/earth.obj', import.meta.url).href
-  loader.load(modal, async (obj) => {
-    const cloudTexture: THREE.Texture = await new Promise((resolve, reject) => {
-      const cloudPng: string = new URL('../assets/model/earth/texture/Clouds_2K.png', import.meta.url).href
-      textureLoader.load(cloudPng, resolve, undefined, reject)
-    })
+  const earthGeo: THREE.SphereGeometry = new THREE.SphereGeometry(5, 32, 32);
+  const earthTexture: THREE.Texture = textureLoader.load(getAssetsFile("earth/earth.png"));
+  const earthBumpTexture: THREE.Texture = textureLoader.load(getAssetsFile("earth/earth_bump.png"));
+  const earthSpecTexture: THREE.Texture = textureLoader.load(getAssetsFile("earth/earth_spec.png"));
+  const earthMaterial: THREE.MeshPhongMaterial = new THREE.MeshPhongMaterial({
+    map: earthTexture,
+    bumpMap: earthBumpTexture,
+    bumpScale: 0.15,
+    specularMap: earthSpecTexture,
+    specular: new THREE.Color("#909090"),
+    shininess: 5,
+    transparent: true,
+    side: THREE.DoubleSide
+  });
+  const earth: THREE.Mesh = new THREE.Mesh(earthGeo, earthMaterial)
+  earthGroup.add(earth)
 
-    const atmosphereTexture: THREE.Texture = await new Promise((resolve, reject) => {
-      const atmospherePng: string = new URL('../assets/model/earth/texture/Bump_2K.png', import.meta.url).href
-      textureLoader.load(atmospherePng, resolve, undefined, reject)
-    })
-
-    const earthTexture: THREE.Texture = await new Promise((resolve, reject) => {
-      const earthPng: string = new URL('../assets/model/earth/texture/Diffuse_2K.png', import.meta.url).href
-      textureLoader.load(earthPng, resolve, undefined, reject)
-    })
-
-    for(let i = 0; i < obj.children.length; i++) {
-      let mesh: any = obj.children[i]
-      if(mesh.name === 'Clouds_Cube.000') {
-        mesh.material.map = cloudTexture
-        mesh.material.blending = THREE.AdditiveBlending
-        mesh.material.depthTest = false
-      }
-      if(mesh.name === 'Atmosphere_Cube.001') {
-        mesh.material.map = atmosphereTexture
-        mesh.material.blending = THREE.AdditiveBlending
-      }
-      if(mesh.name === 'Earth_Cube.002') {
-        mesh.material.map = earthTexture
-      }
-    }
-    obj.scale.set(10, 10, 10)
-    scene.add(obj)
+  const cloudGeo: THREE.SphereGeometry = new THREE.SphereGeometry(5.1, 40, 40)
+  const cloudTexture: THREE.Texture = textureLoader.load(getAssetsFile("earth_cloud.png"));
+  const cloudMaterial: THREE.MeshPhongMaterial = new THREE.MeshPhongMaterial({
+    map: cloudTexture,
+    transparent: true,
+    opacity: 1,
+    blending: THREE.AdditiveBlending,
+    side: THREE.DoubleSide
   })
+  const cloud: THREE.Mesh = new THREE.Mesh(cloudGeo, cloudMaterial)
+  earthGroup.add(cloud)
+
+  earthGroup.rotation.set( 0.6, 3.0, 0.1 );
+
+  scene.add(earthGroup)
+};
+
+const createSatellite = (): void => {
+  const length: number = 100, radius: number = 8, pointsArr: THREE.Vector3[] = [];
+
+  for (let i = 0; i <= length; i++) {
+    pointsArr.push(new THREE.Vector3(radius * Math.cos(Math.PI * 2 * i / length), radius * Math.sin(Math.PI * 2 * i / length), 0))
+  }
+  const curve: THREE.CatmullRomCurve3 = new THREE.CatmullRomCurve3(pointsArr, true, 'catmullrom', 0.5);
+
+  const points = curve.getPoints(50);
+	const geometry = new THREE.BufferGeometry().setFromPoints(points);
+	const material = new THREE.LineBasicMaterial({ color: 0xffffff });
+  const curveObject = new THREE.Line(geometry, material);
+  curveObject.rotation.set( 1.7, 0.5, 1 );
+  
+	scene.add(curveObject)
 }
 
 window.addEventListener("resize", () => {
