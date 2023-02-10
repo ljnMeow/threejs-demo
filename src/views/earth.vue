@@ -21,6 +21,9 @@ let stars: THREE.Points;
 const starCount: number = 10000;
 const textureLoader: THREE.TextureLoader = new THREE.TextureLoader();
 const earthGroup: THREE.Group = new THREE.Group();
+let uniforms = {
+  time: { value: 1.0 }
+}
 
 nextTick(() => {
   initScene();
@@ -85,6 +88,7 @@ const render = (): void => {
   if (stats) {
     stats.update();
   }
+  uniforms.time.value += 0.05;
   requestAnimationFrame(render);
 };
 
@@ -174,13 +178,31 @@ const createSatellite = (): void => {
   }
   const curve: THREE.CatmullRomCurve3 = new THREE.CatmullRomCurve3(pointsArr, true, 'catmullrom', 0.5);
 
-  const points = curve.getPoints(50);
-	const geometry = new THREE.BufferGeometry().setFromPoints(points);
-	const material = new THREE.LineBasicMaterial({ color: 0xffffff });
-  const curveObject = new THREE.Line(geometry, material);
-  curveObject.rotation.set( 1.7, 0.5, 1 );
+  const points: THREE.Vector3[] = curve.getPoints(50);
+	const lineGeo: THREE.BufferGeometry = new THREE.BufferGeometry().setFromPoints(points);
+	// const lineMaterial: THREE.LineBasicMaterial = new THREE.LineBasicMaterial({ color: 0xffffff });
+  const lineMaterial = new THREE.ShaderMaterial({
+    uniforms: uniforms,
+    vertexShader: `
+      uniform float time;
+      void main() {
+        vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+        gl_Position = projectionMatrix * mvPosition;
+      }
+    `,
+    fragmentShader: `
+      uniform float time;
+      void main() {
+        vec2 uv = gl_FragCoord.xy / vec2(800, 800);
+        float brightness = sin(uv.x * 10.0 + time) * 0.5 + 0.5;
+        gl_FragColor = vec4(vec3(brightness), 1.0);
+      }
+    `
+  });
+  const line: THREE.Line = new THREE.Line(lineGeo, lineMaterial);
+  line.rotation.set( 1.7, 0.5, 1 );
   
-	scene.add(curveObject)
+	scene.add(line)
 }
 
 window.addEventListener("resize", () => {
