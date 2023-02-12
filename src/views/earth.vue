@@ -21,9 +21,6 @@ let stars: THREE.Points;
 const starCount: number = 10000;
 const textureLoader: THREE.TextureLoader = new THREE.TextureLoader();
 const earthGroup: THREE.Group = new THREE.Group();
-let uniforms = {
-  time: { value: 1.0 }
-}
 
 nextTick(() => {
   initScene();
@@ -32,7 +29,7 @@ nextTick(() => {
   initControls();
   render();
   initStats();
-  initAxesHelper();
+  // initAxesHelper();
   initLight();
   createStar();
   createEarth();
@@ -82,20 +79,20 @@ const initControls = (): void => {
   controls.zoomSpeed = 1.8;
 };
 
+const initLight = (): void => {
+  let ambientLight: THREE.AmbientLight = new THREE.AmbientLight();
+  scene.add(ambientLight);
+};
+
 const render = (): void => {
   controls.update();
   renderer.render(scene, camera);
   if (stats) {
     stats.update();
   }
-  uniforms.time.value += 0.05;
   requestAnimationFrame(render);
 };
 
-const initLight = (): void => {
-  let ambientLight: THREE.AmbientLight = new THREE.AmbientLight();
-  scene.add(ambientLight);
-};
 
 const createStar = (): void => {
   let geometry: THREE.BufferGeometry = new THREE.BufferGeometry();
@@ -171,35 +168,28 @@ const createEarth = () => {
 };
 
 const createSatellite = (): void => {
-  const length: number = 100, radius: number = 8, pointsArr: THREE.Vector3[] = [];
+  // const length: number = 100, radius: number = 8, pointsArr: THREE.Vector3[] = [];
 
-  for (let i = 0; i <= length; i++) {
-    pointsArr.push(new THREE.Vector3(radius * Math.cos(Math.PI * 2 * i / length), radius * Math.sin(Math.PI * 2 * i / length), 0))
-  }
-  const curve: THREE.CatmullRomCurve3 = new THREE.CatmullRomCurve3(pointsArr, true, 'catmullrom', 0.5);
+  // for (let i = 0; i <= length; i++) {
+  //   pointsArr.push(new THREE.Vector3(radius * Math.cos(Math.PI * 2 * i / length), radius * Math.sin(Math.PI * 2 * i / length), 0))
+  // }
+  // const curve: THREE.CatmullRomCurve3 = new THREE.CatmullRomCurve3(pointsArr, true, 'catmullrom', 0.5);
 
-  const points: THREE.Vector3[] = curve.getPoints(50);
-	const lineGeo: THREE.BufferGeometry = new THREE.BufferGeometry().setFromPoints(points);
+  // const points: THREE.Vector3[] = curve.getPoints(50);
+	// const lineGeo: THREE.BufferGeometry = new THREE.BufferGeometry().setFromPoints(points);
+  const circleGeo = new THREE.CircleGeometry(8.0, 128, Math.PI * 2);
 	// const lineMaterial: THREE.LineBasicMaterial = new THREE.LineBasicMaterial({ color: 0xffffff });
   const lineMaterial = new THREE.ShaderMaterial({
-    uniforms: uniforms,
-    vertexShader: `
-      uniform float time;
+    fragmentShader: `
       void main() {
-        vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-        gl_Position = projectionMatrix * mvPosition;
+        gl_FragColor = vec4( 1.0, 1.0, 1.0, 1.0 );
       }
     `,
-    fragmentShader: `
-      uniform float time;
-      void main() {
-        vec2 uv = gl_FragCoord.xy / vec2(800, 800);
-        float brightness = sin(uv.x * 10.0 + time) * 0.5 + 0.5;
-        gl_FragColor = vec4(vec3(brightness), 1.0);
-      }
-    `
+    side: THREE.FrontSide,
+		blending: THREE.AdditiveBlending,
+		transparent: true
   });
-  const line: THREE.Line = new THREE.Line(lineGeo, lineMaterial);
+  const line: THREE.Line = new THREE.Line(circleGeo, lineMaterial);
   line.rotation.set( 1.7, 0.5, 1 );
   
 	scene.add(line)
