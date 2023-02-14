@@ -29,6 +29,7 @@ const objLoader: OBJLoader = new OBJLoader()
 const mTLLoader: MTLLoader = new MTLLoader()
 const earthGroup: THREE.Group = new THREE.Group();
 let composer: EffectComposer;
+let movePosition: THREE.Vector3[] = []
 
 nextTick(() => {
   initScene();
@@ -88,6 +89,9 @@ const initControls = (): void => {
   controls.zoomSpeed = 1.8;
 };
 
+var target = 1;
+var speed = 0.1;
+
 const render = (): void => {
   controls.update();
   renderer.render(scene, camera);
@@ -102,6 +106,19 @@ const render = (): void => {
     stars.rotation.z -= 0.0003;
   }
   earthGroup && (earthGroup.rotation.y += 0.001)
+
+  // if(satellite) {
+  //   var distance = satellite.position.distanceTo(movePosition[target]);
+  //   if (distance < speed) {
+  //     target = (target + 1) % movePosition.length;
+  //   }
+  //   var position = satellite.position.clone();
+  //   position.lerp(movePosition[target], speed / distance);
+  //   satellite.position.copy(position);
+
+  //   var direction = new THREE.Vector3().subVectors(movePosition[target], satellite.position);
+  //   satellite.lookAt(satellite.position.clone().add(direction));
+  // }
 
   requestAnimationFrame(render);
 };
@@ -213,12 +230,19 @@ const createStarOrbit = (): void => {
 
   outlinePass.selectedObjects = [torus]; // 需要高光的Mesh
 
+  const vertices = (torus.geometry.getAttribute('position') as any).array;
 
-  
-  console.log(torus)
-  console.log(torus.geometry.attributes.position.getX(0))
-  console.log(torus.geometry.attributes.position.getY(0))
-  console.log(torus.geometry.attributes.position.getZ(0))
+  // 将每个顶点数据转换为THREE.Vector3对象
+  for (let i = 0; i < vertices.length; i++) {
+    movePosition.push(new THREE.Vector3(vertices[i * 3 + 0], vertices[i * 3 + 1], vertices[i * 3 + 2]))
+  }
+  // 创建一个变换矩阵
+  const matrix = new THREE.Matrix4();
+  matrix.makeRotationFromEuler(torus.rotation);
+
+  for (let i = 0; i < movePosition.length; i++) {
+    movePosition[i].applyMatrix4(matrix);
+  }
 
 	scene.add(torus)
 }
@@ -228,7 +252,7 @@ const createSatellite = (): void => {
     material.preload()
 
     objLoader.setMaterials(material).load(getAssetsFile('satellite/Satellite.obj'), (obj) => {
-      obj.position.set(8.199999809265137, -0.5, -1)
+      obj.position.copy(movePosition[0])
       satellite = obj
       scene.add(satellite)
     })
