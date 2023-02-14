@@ -3,13 +3,16 @@
 </template>
 
 <script lang="ts" setup>
-import * as THREE from "three";
-import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
-import Stats from "stats.js";
-import { nextTick, ref } from "vue";
-import { getAssetsFile } from "../utils";
-
-import starPng from "../assets/star.png";
+import * as THREE from "three"
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls"
+import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer"
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass'
+import { OutlinePass } from 'three/examples/jsm/postprocessing/OutlinePass'
+import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader'
+import { MTLLoader } from 'three/examples/jsm/loaders/MTLLoader'
+import Stats from "stats.js"
+import { nextTick, ref } from "vue"
+import { getAssetsFile } from "../utils"
 
 const canvas = ref<any>(null);
 let scene: THREE.Scene;
@@ -18,12 +21,14 @@ let renderer: THREE.WebGLRenderer;
 let controls: any;
 let stats: any;
 let stars: THREE.Points;
+let torus: THREE.Mesh;
+let satellite: THREE.Group;
 const starCount: number = 10000;
 const textureLoader: THREE.TextureLoader = new THREE.TextureLoader();
+const objLoader: OBJLoader = new OBJLoader()
+const mTLLoader: MTLLoader = new MTLLoader()
 const earthGroup: THREE.Group = new THREE.Group();
-let uniforms = {
-  time: { value: 1.0 }
-}
+let composer: EffectComposer;
 
 nextTick(() => {
   initScene();
@@ -36,6 +41,7 @@ nextTick(() => {
   initLight();
   createStar();
   createEarth();
+  createStarOrbit();
   createSatellite();
 });
 
@@ -88,12 +94,20 @@ const render = (): void => {
   if (stats) {
     stats.update();
   }
-  uniforms.time.value += 0.05;
+  if(composer) {
+    composer.render();
+  }
+  if(stars){
+    stars.rotation.y += 0.0009;
+    stars.rotation.z -= 0.0003;
+  }
+  earthGroup && (earthGroup.rotation.y += 0.001)
+
   requestAnimationFrame(render);
 };
 
 const initLight = (): void => {
-  let ambientLight: THREE.AmbientLight = new THREE.AmbientLight();
+  const ambientLight: THREE.AmbientLight = new THREE.AmbientLight( new THREE.Color('rgb(222, 237, 255)'));
   scene.add(ambientLight);
 };
 
@@ -120,7 +134,7 @@ const createStar = (): void => {
   geometry.setAttribute("position", new THREE.BufferAttribute(vertices, 3));
   geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
 
-  let starTexture: THREE.Texture = textureLoader.load(starPng);
+  let starTexture: THREE.Texture = textureLoader.load(getAssetsFile("star.png"));
   let starMaterial = new THREE.PointsMaterial({
     map: starTexture,
     size: 1,
@@ -170,39 +184,55 @@ const createEarth = () => {
   scene.add(earthGroup)
 };
 
-const createSatellite = (): void => {
-  const length: number = 100, radius: number = 8, pointsArr: THREE.Vector3[] = [];
-
-  for (let i = 0; i <= length; i++) {
-    pointsArr.push(new THREE.Vector3(radius * Math.cos(Math.PI * 2 * i / length), radius * Math.sin(Math.PI * 2 * i / length), 0))
-  }
-  const curve: THREE.CatmullRomCurve3 = new THREE.CatmullRomCurve3(pointsArr, true, 'catmullrom', 0.5);
-
-  const points: THREE.Vector3[] = curve.getPoints(50);
-	const lineGeo: THREE.BufferGeometry = new THREE.BufferGeometry().setFromPoints(points);
-	// const lineMaterial: THREE.LineBasicMaterial = new THREE.LineBasicMaterial({ color: 0xffffff });
-  const lineMaterial = new THREE.ShaderMaterial({
-    uniforms: uniforms,
-    vertexShader: `
-      uniform float time;
-      void main() {
-        vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-        gl_Position = projectionMatrix * mvPosition;
-      }
-    `,
-    fragmentShader: `
-      uniform float time;
-      void main() {
-        vec2 uv = gl_FragCoord.xy / vec2(800, 800);
-        float brightness = sin(uv.x * 10.0 + time) * 0.5 + 0.5;
-        gl_FragColor = vec4(vec3(brightness), 1.0);
-      }
-    `
+const createStarOrbit = (): void => {
+	const torusGeo: THREE.TorusGeometry = new THREE.TorusGeometry(8.0, 0.2, 2, 200)
+  const torusMaterial: THREE.MeshBasicMaterial = new THREE.MeshBasicMaterial({
+    color: new THREE.Color("rgb(147, 181, 207)"),
+    wireframe: false,
+    transparent: true,
+    opacity: 0.4
   });
-  const line: THREE.Line = new THREE.Line(lineGeo, lineMaterial);
-  line.rotation.set( 1.7, 0.5, 1 );
+  torus = new THREE.Mesh(torusGeo, torusMaterial);
+  torus.rotation.set( 1.7, 0.5, 1 );
+  torus.updateMatrix();
+
+  composer = new EffectComposer( renderer )
+
+  const renderPass: RenderPass = new RenderPass( scene, camera );
+  composer.addPass( renderPass );
   
-	scene.add(line)
+  const outlinePass: OutlinePass = new OutlinePass( new THREE.Vector2( canvas.value.clientWidth, canvas.value.clientHeight ), scene, camera );
+  composer.addPass( outlinePass );
+
+  outlinePass.pulsePeriod = 0; // 数值越大，律动越慢
+  outlinePass.visibleEdgeColor.set( new THREE.Color("rgb(147, 181, 207)") ); // 高光颜色
+  outlinePass.usePatternTexture = false; // 使用纹理覆盖
+  outlinePass.edgeStrength = 2; // 高光边缘强度
+  outlinePass.edgeGlow = 1; // 边缘微光强度
+  outlinePass.edgeThickness = 1; // 高光厚度
+
+  outlinePass.selectedObjects = [torus]; // 需要高光的Mesh
+
+
+  
+  console.log(torus)
+  console.log(torus.geometry.attributes.position.getX(0))
+  console.log(torus.geometry.attributes.position.getY(0))
+  console.log(torus.geometry.attributes.position.getZ(0))
+
+	scene.add(torus)
+}
+
+const createSatellite = (): void => {
+  mTLLoader.load(getAssetsFile('satellite/Satellite.mtl'), (material) => {
+    material.preload()
+
+    objLoader.setMaterials(material).load(getAssetsFile('satellite/Satellite.obj'), (obj) => {
+      obj.position.set(8.199999809265137, -0.5, -1)
+      satellite = obj
+      scene.add(satellite)
+    })
+  })
 }
 
 window.addEventListener("resize", () => {
