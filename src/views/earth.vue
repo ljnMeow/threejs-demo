@@ -1,5 +1,12 @@
 <template>
-  <div id="canvas" ref="canvas"></div>
+  <div>
+    <div class="loading">
+      <div class="content">
+        <div class="process" :style="{ width: `${process}%` }"></div>
+      </div>
+    </div>
+    <div id="canvas" ref="canvas"></div>
+  </div>
 </template>
 
 <script lang="ts" setup>
@@ -14,22 +21,32 @@ import Stats from "stats.js"
 import { nextTick, ref } from "vue"
 import { getAssetsFile } from "../utils"
 
-const canvas = ref<any>(null);
-let scene: THREE.Scene;
-let camera: THREE.PerspectiveCamera;
-let renderer: THREE.WebGLRenderer;
-let controls: any;
-let stats: any;
-let stars: THREE.Points;
-let torus: THREE.Mesh;
-let satellite: THREE.Group;
-const starCount: number = 10000;
-const textureLoader: THREE.TextureLoader = new THREE.TextureLoader();
-const objLoader: OBJLoader = new OBJLoader()
-const mTLLoader: MTLLoader = new MTLLoader()
-const earthGroup: THREE.Group = new THREE.Group();
-let composer: EffectComposer;
-let movePosition: THREE.Vector3[] = []
+const canvas = ref<any>(null); // 画布
+let scene: THREE.Scene; // 场景
+let camera: THREE.PerspectiveCamera; // 相机
+let renderer: THREE.WebGLRenderer; // 渲染器
+let controls: any; // 控制器
+let stats: any; // 性能监测器
+let stars: THREE.Points; // 星空
+const earthGroup: THREE.Group = new THREE.Group(); // 地球和大气层组合
+let torus: THREE.Mesh; // 星轨圆环
+let satellite: THREE.Group; // 卫星
+const starCount: number = 10000; // 星星数量
+const manager = new THREE.LoadingManager(); // 加载器管理器
+const textureLoader: THREE.TextureLoader = new THREE.TextureLoader(manager); // 纹理加载器
+const objLoader: OBJLoader = new OBJLoader(manager) // OBJ模型加载器
+const mTLLoader: MTLLoader = new MTLLoader(manager) // MTL资源加载器
+const process = ref<number>(0); // 加载进度
+let composer: EffectComposer; // 效果合成器
+let curve: THREE.CatmullRomCurve3; // 三维曲线
+let progress = 0; // 运动路径初始位置
+const velocity = 0.001 // 速度
+
+manager.onProgress = function(item, loaded, total) {
+  let value = loaded / total * 100
+  process.value = value
+  console.log("process", process.value)
+};
 
 nextTick(() => {
   initScene();
@@ -43,6 +60,7 @@ nextTick(() => {
   createStar();
   createEarth();
   createStarOrbit();
+  createMoveTrack();
   createSatellite();
 });
 
@@ -59,7 +77,9 @@ const initCamera = (width: number, height: number): void => {
 };
 
 const initRenderer = (width: number, height: number): void => {
-  renderer = new THREE.WebGLRenderer();
+  renderer = new THREE.WebGLRenderer({
+    antialias: true, // 抗锯齿
+  });
   renderer.setSize(width, height);
   canvas.value.appendChild(renderer.domElement);
   renderer.render(scene, camera);
@@ -87,40 +107,6 @@ const initControls = (): void => {
   controls.enablePan = true;
   //摄像机缩放的速度
   controls.zoomSpeed = 1.8;
-};
-
-var target = 1;
-var speed = 0.1;
-
-const render = (): void => {
-  controls.update();
-  renderer.render(scene, camera);
-  if (stats) {
-    stats.update();
-  }
-  if(composer) {
-    composer.render();
-  }
-  if(stars){
-    stars.rotation.y += 0.0009;
-    stars.rotation.z -= 0.0003;
-  }
-  earthGroup && (earthGroup.rotation.y += 0.001)
-
-  // if(satellite) {
-  //   var distance = satellite.position.distanceTo(movePosition[target]);
-  //   if (distance < speed) {
-  //     target = (target + 1) % movePosition.length;
-  //   }
-  //   var position = satellite.position.clone();
-  //   position.lerp(movePosition[target], speed / distance);
-  //   satellite.position.copy(position);
-
-  //   var direction = new THREE.Vector3().subVectors(movePosition[target], satellite.position);
-  //   satellite.lookAt(satellite.position.clone().add(direction));
-  // }
-
-  requestAnimationFrame(render);
 };
 
 const initLight = (): void => {
@@ -158,6 +144,8 @@ const createStar = (): void => {
     transparent: true,
     opacity: 1,
     vertexColors: true,
+    depthTest: true,
+    depthWrite: false,
     blending: THREE.AdditiveBlending,
     sizeAttenuation: true,
   });
@@ -185,7 +173,7 @@ const createEarth = () => {
   earthGroup.add(earth)
 
   const cloudGeo: THREE.SphereGeometry = new THREE.SphereGeometry(5.1, 40, 40)
-  const cloudTexture: THREE.Texture = textureLoader.load(getAssetsFile("earth_cloud.png"));
+  const cloudTexture: THREE.Texture = textureLoader.load(getAssetsFile("earth/earth_cloud.png"));
   const cloudMaterial: THREE.MeshPhongMaterial = new THREE.MeshPhongMaterial({
     map: cloudTexture,
     transparent: true,
@@ -227,24 +215,31 @@ const createStarOrbit = (): void => {
   outlinePass.edgeStrength = 2; // 高光边缘强度
   outlinePass.edgeGlow = 1; // 边缘微光强度
   outlinePass.edgeThickness = 1; // 高光厚度
-
   outlinePass.selectedObjects = [torus]; // 需要高光的Mesh
+  
+	scene.add(torus)
+}
 
-  const vertices = (torus.geometry.getAttribute('position') as any).array;
-
-  // 将每个顶点数据转换为THREE.Vector3对象
-  for (let i = 0; i < vertices.length; i++) {
-    movePosition.push(new THREE.Vector3(vertices[i * 3 + 0], vertices[i * 3 + 1], vertices[i * 3 + 2]))
+const createMoveTrack = (): void => {
+  const length: number = 300, radius: number = 9, pointsArr: THREE.Vector3[] = [];
+  for (let i = 0; i <= length; i++) {
+    pointsArr.push(new THREE.Vector3(radius * Math.cos(Math.PI * 2 * i / length), radius * Math.sin(Math.PI * 2 * i / length), 0))
   }
-  // 创建一个变换矩阵
+  curve = new THREE.CatmullRomCurve3(pointsArr, true, 'catmullrom', 0.5);
+  const points: THREE.Vector3[] = curve.getPoints(50);
+	const lineGeo: THREE.BufferGeometry = new THREE.BufferGeometry().setFromPoints(points);
+  const lineMaterial: THREE.LineBasicMaterial = new THREE.LineBasicMaterial({ transparent: true, opacity: 0 })
+  const line = new THREE.Line(lineGeo, lineMaterial)
+  line.rotation.set( 1.7, 0.5, 1 );
+
   const matrix = new THREE.Matrix4();
   matrix.makeRotationFromEuler(torus.rotation);
 
-  for (let i = 0; i < movePosition.length; i++) {
-    movePosition[i].applyMatrix4(matrix);
+  for (let i = 0; i < curve.points.length; i++) {
+    curve.points[i].applyMatrix4(matrix);
   }
 
-	scene.add(torus)
+  scene.add(line)
 }
 
 const createSatellite = (): void => {
@@ -252,12 +247,43 @@ const createSatellite = (): void => {
     material.preload()
 
     objLoader.setMaterials(material).load(getAssetsFile('satellite/Satellite.obj'), (obj) => {
-      obj.position.copy(movePosition[0])
+      obj.position.copy(curve.points[0])
       satellite = obj
       scene.add(satellite)
     })
   })
 }
+
+const render = (): void => {
+  controls.update();
+  renderer.render(scene, camera);
+  if (stats) {
+    stats.update();
+  }
+
+  if(composer) {
+    composer.render();
+  }
+  
+  if(stars){
+    stars.rotation.y += 0.0009;
+    stars.rotation.z -= 0.0003;
+  }
+
+  earthGroup && (earthGroup.rotation.y += 0.001)
+
+  if(satellite) {
+    if (progress <= 1 - velocity) {
+      const satelliteMovePosition  = curve.getPointAt(progress + velocity)
+      progress += velocity
+      satellite.position.copy(satelliteMovePosition)
+    } else {
+      progress = 0
+    }
+  }
+
+  requestAnimationFrame(render);
+};
 
 window.addEventListener("resize", () => {
   // 更新摄像机
@@ -268,5 +294,39 @@ window.addEventListener("resize", () => {
   renderer.setSize(canvas.value.clientWidth, canvas.value.clientHeight);
   // 设置渲染器的像素比
   renderer.setPixelRatio(window.devicePixelRatio);
+  // 更新效果合成器
+  composer.setSize(canvas.value.clientWidth, canvas.value.clientHeight);
 });
 </script>
+
+<style lang="less" scoped>
+.loading {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  background: #333333;
+  z-index: 100000;
+
+  .content {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 30%;
+    height: 30px;
+    background: #1e1d1d;
+    border-radius: 30px;
+    box-shadow: 0 0 4px 4px #ffffff3c;
+    overflow: hidden;
+
+    .process {
+      width: 0%;
+      height: 100%;
+      background-image: linear-gradient(45deg, #0a9798 0%, #0b75cf 100%);
+      transition: all 1s;
+    }
+  }
+}
+</style>
