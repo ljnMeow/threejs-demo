@@ -1,10 +1,15 @@
 <template>
   <div>
-    <div class="loading">
-      <div class="content">
-        <div class="process" :style="{ width: `${process}%` }"></div>
+    <Transition>
+      <div class="loading" v-if="loading">
+        <div class="content">
+          <div class="box">
+            <div class="process" :style="{ width: `${process}%` }"></div>
+          </div>
+          <p>{{ `${process}%` }} Loading......</p>
+        </div>
       </div>
-    </div>
+    </Transition>
     <div id="canvas" ref="canvas"></div>
   </div>
 </template>
@@ -18,6 +23,7 @@ import { OutlinePass } from 'three/examples/jsm/postprocessing/OutlinePass'
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader'
 import { MTLLoader } from 'three/examples/jsm/loaders/MTLLoader'
 import Stats from "stats.js"
+import gsap from "gsap";
 import { nextTick, ref } from "vue"
 import { getAssetsFile } from "../utils"
 
@@ -31,12 +37,14 @@ let stars: THREE.Points; // 星空
 const earthGroup: THREE.Group = new THREE.Group(); // 地球和大气层组合
 let torus: THREE.Mesh; // 星轨圆环
 let satellite: THREE.Group; // 卫星
+const meshGroup: THREE.Group = new THREE.Group(); // 场景内除星空、灯光外所有内容的组合
 const starCount: number = 10000; // 星星数量
 const manager = new THREE.LoadingManager(); // 加载器管理器
 const textureLoader: THREE.TextureLoader = new THREE.TextureLoader(manager); // 纹理加载器
 const objLoader: OBJLoader = new OBJLoader(manager) // OBJ模型加载器
 const mTLLoader: MTLLoader = new MTLLoader(manager) // MTL资源加载器
 const process = ref<number>(0); // 加载进度
+const loading = ref<boolean>(true); // 加载中
 let composer: EffectComposer; // 效果合成器
 let curve: THREE.CatmullRomCurve3; // 三维曲线
 let progress = 0; // 运动路径初始位置
@@ -44,8 +52,24 @@ const velocity = 0.001 // 速度
 
 manager.onProgress = function(item, loaded, total) {
   let value = loaded / total * 100
-  process.value = value
-  console.log("process", process.value)
+  process.value = Math.ceil(value)
+
+  if(value === 100) {
+    setTimeout(() => {
+      loading.value = false
+
+      gsap.to(meshGroup.position, {
+        z: 0,
+        ease: "Power2.inOut",
+        duration: 1,
+      })
+      gsap.to(earthGroup.rotation, {
+        y: 10,
+        ease: "Power2.inOut",
+        duration: 2,
+      })
+    }, 1000)
+  }
 };
 
 nextTick(() => {
@@ -55,13 +79,16 @@ nextTick(() => {
   initControls();
   render();
   initStats();
-  initAxesHelper();
+  // initAxesHelper();
   initLight();
   createStar();
   createEarth();
   createStarOrbit();
   createMoveTrack();
   createSatellite();
+
+  meshGroup.position.set(0, 0, -100)
+  scene.add(meshGroup)
 });
 
 const initScene = (): void => {
@@ -186,7 +213,7 @@ const createEarth = () => {
 
   earthGroup.rotation.set( 0.6, 3.0, 0.1 );
 
-  scene.add(earthGroup)
+  meshGroup.add(earthGroup)
 };
 
 const createStarOrbit = (): void => {
@@ -216,8 +243,8 @@ const createStarOrbit = (): void => {
   outlinePass.edgeGlow = 1; // 边缘微光强度
   outlinePass.edgeThickness = 1; // 高光厚度
   outlinePass.selectedObjects = [torus]; // 需要高光的Mesh
-  
-	scene.add(torus)
+
+  meshGroup.add(torus)
 }
 
 const createMoveTrack = (): void => {
@@ -239,7 +266,7 @@ const createMoveTrack = (): void => {
     curve.points[i].applyMatrix4(matrix);
   }
 
-  scene.add(line)
+  meshGroup.add(line)
 }
 
 const createSatellite = (): void => {
@@ -249,7 +276,7 @@ const createSatellite = (): void => {
     objLoader.setMaterials(material).load(getAssetsFile('satellite/Satellite.obj'), (obj) => {
       obj.position.copy(curve.points[0])
       satellite = obj
-      scene.add(satellite)
+      meshGroup.add(satellite)
     })
   })
 }
@@ -315,18 +342,36 @@ window.addEventListener("resize", () => {
     top: 50%;
     transform: translate(-50%, -50%);
     width: 30%;
-    height: 30px;
-    background: #1e1d1d;
-    border-radius: 30px;
-    box-shadow: 0 0 4px 4px #ffffff3c;
-    overflow: hidden;
+  
+    .box {
+      width: 100%;
+      height: 30px;
+      background: #1e1d1d;
+      border-radius: 30px;
+      box-shadow: 0 0 4px 4px #ffffff3c;
+      overflow: hidden;
 
-    .process {
-      width: 0%;
-      height: 100%;
-      background-image: linear-gradient(45deg, #0a9798 0%, #0b75cf 100%);
-      transition: all 1s;
+      .process {
+        width: 0%;
+        height: 100%;
+        background-image: linear-gradient(45deg, #0a9798 0%, #0b75cf 100%);
+        transition: all 1s;
+      }
     }
-  }
+
+    p {
+      padding-top: 10px;
+    }
+  } 
+}
+
+.v-enter-active,
+.v-leave-active {
+  transition: opacity 0.5s ease;
+}
+
+.v-enter-from,
+.v-leave-to {
+  opacity: 0;
 }
 </style>
