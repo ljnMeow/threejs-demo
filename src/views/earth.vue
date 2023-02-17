@@ -24,7 +24,7 @@ import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader'
 import { MTLLoader } from 'three/examples/jsm/loaders/MTLLoader'
 import Stats from "stats.js"
 import gsap from "gsap";
-import { nextTick, ref } from "vue"
+import { nextTick, ref, getCurrentInstance } from "vue"
 import { getAssetsFile } from "../utils"
 
 const canvas = ref<any>(null); // 画布
@@ -49,6 +49,7 @@ let composer: EffectComposer; // 效果合成器
 let curve: THREE.CatmullRomCurve3; // 三维曲线
 let progress = 0; // 运动路径初始位置
 const velocity = 0.001 // 速度
+const { proxy } = getCurrentInstance() as any
 
 manager.onProgress = function(item, loaded, total) {
   let value = loaded / total * 100
@@ -82,6 +83,7 @@ nextTick(() => {
   // initAxesHelper();
   initLight();
   createStar();
+  drawChinaMap();
   createEarth();
   createStarOrbit();
   createMoveTrack();
@@ -214,6 +216,7 @@ const createEarth = () => {
   earthGroup.rotation.set( 0.6, 3.0, 0.1 );
 
   meshGroup.add(earthGroup)
+  scene.add(meshGroup)
 };
 
 const createStarOrbit = (): void => {
@@ -281,6 +284,74 @@ const createSatellite = (): void => {
   })
 }
 
+const getChinaMapGeoData = (): Promise<unknown> => {
+  return new Promise((resolve, reject) => {
+    proxy.$axios.get('https://geo.datav.aliyun.com/areas_v3/bound/100000.json').then((res: any) => {
+      if(res.status === 200) {
+        resolve(res.data.features)
+      } else {
+        reject('地理数据获取出错！')
+      }
+    }).catch((err: any) => {
+      console.log(err)
+      reject('地理数据获取出错！')
+    })
+  })
+}
+
+const lglnToxyz = (lg: number, lt: number): THREE.Vector3 => {
+  // 半径
+  const radius = 5
+  // 竖直面
+  const theta = (90 + lg) * (Math.PI / 180)
+  // 水平面
+  const phi = (90 - lt) * (Math.PI / 180)
+  // 球坐标
+  const spherical = new THREE.Spherical(radius, phi, theta)
+  // 三维向量
+  const xyz = new THREE.Vector3()
+  // 从球坐标中设置该向量
+  xyz.setFromSpherical(spherical)
+
+  return xyz
+}
+
+const drawChinaMap = async (): Promise<void> => {
+  try {
+    const chinaMap: THREE.Group = new THREE.Group()
+    const geoData: any[] = await getChinaMapGeoData() as any[]
+    
+    geoData.forEach((geo: any) => {
+      // 省份
+      const province = new THREE.Object3D()
+      // 地理数据中省份对应模型的坐标
+      const coordinates: number[][][][] = geo.geometry.coordinates;
+      
+      coordinates.forEach( (multipleGraphical: number[][][]) => {
+        multipleGraphical.forEach((graphical: number[][]) => {
+          const lineMaterial: THREE.LineBasicMaterial = new THREE.LineBasicMaterial( { color: new THREE.Color('rgb(17, 101, 154)') } );
+          const positions = []
+          const linGeometry: THREE.BufferGeometry = new THREE.BufferGeometry();
+
+          for(let i = 0; i < graphical.length; i++) {
+            const xyz = lglnToxyz(graphical[i][0], graphical[i][1])
+
+            positions.push( xyz.x, xyz.y, xyz.z );
+          }
+          linGeometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+          const line: THREE.Line = new THREE.Line( linGeometry, lineMaterial );
+					province.add( line );
+        })
+      })
+      chinaMap.add(province)
+    })
+    earthGroup.add(chinaMap)
+  } catch (err) {
+    alert(err)
+  }
+}
+
+
 const render = (): void => {
   controls.update();
   renderer.render(scene, camera);
@@ -311,6 +382,7 @@ const render = (): void => {
 
   requestAnimationFrame(render);
 };
+
 
 window.addEventListener("resize", () => {
   // 更新摄像机
