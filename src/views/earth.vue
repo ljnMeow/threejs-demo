@@ -83,11 +83,11 @@ nextTick(() => {
   // initAxesHelper();
   initLight();
   createStar();
-  drawChinaMap();
   createEarth();
   createStarOrbit();
   createMoveTrack();
   createSatellite();
+  createEarthPoint();
 
   meshGroup.position.set(0, 0, -100)
   scene.add(meshGroup)
@@ -284,21 +284,6 @@ const createSatellite = (): void => {
   })
 }
 
-const getChinaMapGeoData = (): Promise<unknown> => {
-  return new Promise((resolve, reject) => {
-    proxy.$axios.get('https://geo.datav.aliyun.com/areas_v3/bound/100000.json').then((res: any) => {
-      if(res.status === 200) {
-        resolve(res.data.features)
-      } else {
-        reject('地理数据获取出错！')
-      }
-    }).catch((err: any) => {
-      console.log(err)
-      reject('地理数据获取出错！')
-    })
-  })
-}
-
 const lglnToxyz = (lg: number, lt: number): THREE.Vector3 => {
   // 半径
   const radius = 5
@@ -316,41 +301,42 @@ const lglnToxyz = (lg: number, lt: number): THREE.Vector3 => {
   return xyz
 }
 
-const drawChinaMap = async (): Promise<void> => {
-  try {
-    const chinaMap: THREE.Group = new THREE.Group()
-    const geoData: any[] = await getChinaMapGeoData() as any[]
-    
-    geoData.forEach((geo: any) => {
-      // 省份
-      const province = new THREE.Object3D()
-      // 地理数据中省份对应模型的坐标
-      const coordinates: number[][][][] = geo.geometry.coordinates;
-      
-      coordinates.forEach( (multipleGraphical: number[][][]) => {
-        multipleGraphical.forEach((graphical: number[][]) => {
-          const lineMaterial: THREE.LineBasicMaterial = new THREE.LineBasicMaterial( { color: new THREE.Color('rgb(17, 101, 154)') } );
-          const positions = []
-          const linGeometry: THREE.BufferGeometry = new THREE.BufferGeometry();
+const createEarthPoint = (): void => {
+  const pointGroup: THREE.Group = new THREE.Group();
 
-          for(let i = 0; i < graphical.length; i++) {
-            const xyz = lglnToxyz(graphical[i][0], graphical[i][1])
+  const planeGeo: THREE.PlaneGeometry = new THREE.PlaneGeometry( 1, 1 );
+  const waveTexture: THREE.Texture = textureLoader.load(getAssetsFile("wave.png"));
+  const waveMaterial: THREE.MeshBasicMaterial = new THREE.MeshBasicMaterial({
+    map: waveTexture,
+    color: 0x22ffcc,
+    transparent: true,
+    opacity: 1.0,
+    side: THREE.DoubleSide,
+    depthWrite: false,
+  })
+  const planeMesh: THREE.Mesh = new THREE.Mesh(planeGeo, waveMaterial)
 
-            positions.push( xyz.x, xyz.y, xyz.z );
-          }
-          linGeometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
-          const line: THREE.Line = new THREE.Line( linGeometry, lineMaterial );
-					province.add( line );
-        })
-      })
-      chinaMap.add(province)
-    })
-    earthGroup.add(chinaMap)
-  } catch (err) {
-    alert(err)
-  }
+  const lightGroup: THREE.Group = new THREE.Group();
+  const lightGeo: THREE.CylinderGeometry = new THREE.CylinderGeometry(0, 0.2, 1.6, 32)
+  const lightTexture: THREE.Texture = textureLoader.load(getAssetsFile("lightray.png"))
+  const lightMaterial: THREE.MeshBasicMaterial = new THREE.MeshBasicMaterial({
+    map: lightTexture,
+    color: 0x22ffcc,
+    side: THREE.DoubleSide,
+    transparent: true,
+    opacity: 1.0,
+    depthWrite: false,
+  })
+  const lightMesh: THREE.Mesh = new THREE.Mesh(lightGeo, lightMaterial)
+  lightMesh.rotateX(Math.PI / 2)
+  lightMesh.position.z = 0.8
+  const lightMeshCopy: THREE.Mesh = lightMesh.clone().rotateY(Math.PI / 2)
+  lightGroup.add(lightMesh, lightMeshCopy)
+
+  pointGroup.add(planeMesh, lightGroup)
+
+  scene.add(pointGroup)
 }
-
 
 const render = (): void => {
   controls.update();
