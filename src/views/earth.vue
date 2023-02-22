@@ -24,7 +24,7 @@ import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader'
 import { MTLLoader } from 'three/examples/jsm/loaders/MTLLoader'
 import Stats from "stats.js"
 import gsap from "gsap";
-import { nextTick, ref, getCurrentInstance } from "vue"
+import { nextTick, ref } from "vue"
 import { getAssetsFile } from "../utils"
 
 const canvas = ref<any>(null); // 画布
@@ -49,7 +49,29 @@ let composer: EffectComposer; // 效果合成器
 let curve: THREE.CatmullRomCurve3; // 三维曲线
 let progress = 0; // 运动路径初始位置
 const velocity = 0.001 // 速度
-const { proxy } = getCurrentInstance() as any
+const wareArr: THREE.Mesh[] = []
+const lnglatData = [
+  {
+    lnglat: [[116.40, 39.91], [109.51, 18.25]],
+    color: 'rgb(192, 44, 56)'
+  },
+  {
+    lnglat: [[113.26, 23.13], [169.14, 67.74]],
+    color: 'rgb(129, 60, 133)'
+  },
+  {
+    lnglat: [[101.78, 36.54], [22.90, 51.23]],
+    color: 'rgb(32, 161, 98)'
+  },
+  {
+    lnglat: [[100.22, 26.72], [35.75, -6.17]],
+    color: 'rgb(248, 223, 114)'
+  },
+  {
+    lnglat: [[119.36, 26.13], [-56.89, -14.54]],
+    color: 'rgb(16, 31, 48)'
+  }
+]
 
 manager.onProgress = function(item, loaded, total) {
   let value = loaded / total * 100
@@ -64,11 +86,11 @@ manager.onProgress = function(item, loaded, total) {
         ease: "Power2.inOut",
         duration: 1,
       })
-      gsap.to(earthGroup.rotation, {
-        y: 10,
-        ease: "Power2.inOut",
-        duration: 2,
-      })
+      // gsap.to(earthGroup.rotation, {
+      //   y: 10,
+      //   ease: "Power2.inOut",
+      //   duration: 2,
+      // })
     }, 1000)
   }
 };
@@ -87,7 +109,7 @@ nextTick(() => {
   createStarOrbit();
   createMoveTrack();
   createSatellite();
-  createEarthPoint();
+  drawPointOnEarth();
 
   meshGroup.position.set(0, 0, -100)
   scene.add(meshGroup)
@@ -213,7 +235,7 @@ const createEarth = () => {
   const cloud: THREE.Mesh = new THREE.Mesh(cloudGeo, cloudMaterial)
   earthGroup.add(cloud)
 
-  earthGroup.rotation.set( 0.6, 3.0, 0.1 );
+  // earthGroup.rotation.set( 0.6, 3.0, 0.1 );
 
   meshGroup.add(earthGroup)
   scene.add(meshGroup)
@@ -284,9 +306,7 @@ const createSatellite = (): void => {
   })
 }
 
-const lglnToxyz = (lg: number, lt: number): THREE.Vector3 => {
-  // 半径
-  const radius = 5
+const lglnToxyz = (lg: number, lt: number, radius: number): THREE.Vector3 => {
   // 竖直面
   const theta = (90 + lg) * (Math.PI / 180)
   // 水平面
@@ -301,27 +321,30 @@ const lglnToxyz = (lg: number, lt: number): THREE.Vector3 => {
   return xyz
 }
 
-const createEarthPoint = (): void => {
+const createEarthPoint = (localton: THREE.Vector3, color: string): THREE.Group => {
   const pointGroup: THREE.Group = new THREE.Group();
 
-  const planeGeo: THREE.PlaneGeometry = new THREE.PlaneGeometry( 1, 1 );
+  const waveGeo: THREE.PlaneGeometry = new THREE.PlaneGeometry( 0.3, 0.3 );
   const waveTexture: THREE.Texture = textureLoader.load(getAssetsFile("wave.png"));
   const waveMaterial: THREE.MeshBasicMaterial = new THREE.MeshBasicMaterial({
     map: waveTexture,
-    color: 0x22ffcc,
+    color: color,
     transparent: true,
     opacity: 1.0,
     side: THREE.DoubleSide,
     depthWrite: false,
   })
-  const planeMesh: THREE.Mesh = new THREE.Mesh(planeGeo, waveMaterial)
+  let waveMesh: THREE.Mesh = new THREE.Mesh(waveGeo, waveMaterial);
+  (waveMesh as any).size = 5.1 * 0.3;
+  (waveMesh as any)._s = Math.random() * 1.0 + 1.0;
 
-  const lightGroup: THREE.Group = new THREE.Group();
-  const lightGeo: THREE.CylinderGeometry = new THREE.CylinderGeometry(0, 0.2, 1.6, 32)
+  wareArr.push(waveMesh)
+
+  const lightGeo: THREE.CylinderGeometry = new THREE.CylinderGeometry(0, 0.05, 0.5, 32)
   const lightTexture: THREE.Texture = textureLoader.load(getAssetsFile("lightray.png"))
   const lightMaterial: THREE.MeshBasicMaterial = new THREE.MeshBasicMaterial({
     map: lightTexture,
-    color: 0x22ffcc,
+    color: color,
     side: THREE.DoubleSide,
     transparent: true,
     opacity: 1.0,
@@ -329,13 +352,46 @@ const createEarthPoint = (): void => {
   })
   const lightMesh: THREE.Mesh = new THREE.Mesh(lightGeo, lightMaterial)
   lightMesh.rotateX(Math.PI / 2)
-  lightMesh.position.z = 0.8
-  const lightMeshCopy: THREE.Mesh = lightMesh.clone().rotateY(Math.PI / 2)
-  lightGroup.add(lightMesh, lightMeshCopy)
+  lightMesh.position.z = 0.25
+  
 
-  pointGroup.add(planeMesh, lightGroup)
+  pointGroup.add(waveMesh, lightMesh)
 
-  scene.add(pointGroup)
+  pointGroup.position.set(localton.x, localton.y, localton.z)
+  const coordVec3 = new THREE.Vector3( localton.x, localton.y, localton.z ).normalize();
+  const meshNormal = new THREE.Vector3( 0, 0, 1 );
+  pointGroup.quaternion.setFromUnitVectors( meshNormal, coordVec3 );
+
+  return pointGroup
+}
+
+const drawPointOnEarth = (): void => {
+  const localtionGroup: THREE.Group = new THREE.Group();
+  for(let i  = 0; i < lnglatData.length; i++) {
+    lnglatData[i].lnglat.forEach((lnglat: number[]) => {
+      const xyz = lglnToxyz(lnglat[0], lnglat[1], 5.1)
+      localtionGroup.add(createEarthPoint(xyz, lnglatData[i].color))
+    })
+
+    const from = lglnToxyz(lnglatData[i].lnglat[0][0], lnglatData[i].lnglat[0][1], 5.1)
+    const to = lglnToxyz(lnglatData[i].lnglat[1][0], lnglatData[i].lnglat[1][1], 5.1)
+    createRayLine(from, to, lnglatData[i].color)
+  }
+  scene.add(localtionGroup)
+}
+
+const createRayLine = (from: THREE.Vector3, to: THREE.Vector3, color: string): void => {
+  
+}
+
+const getVCenter = (v1: THREE.Vector3, v2: THREE.Vector3): THREE.Vector3 => {
+  const v = v1.add( v2 );
+  return v.divideScalar( 2 );
+}
+
+const getLenVcetor = (v1: THREE.Vector3, v2: THREE.Vector3, len: number): THREE.Vector3 => {
+  const v1v2Len = v1.distanceTo( v2 );
+  return v1.lerp( v2, len / v1v2Len );
 }
 
 const render = (): void => {
@@ -354,7 +410,7 @@ const render = (): void => {
     stars.rotation.z -= 0.0003;
   }
 
-  earthGroup && (earthGroup.rotation.y += 0.001)
+  // earthGroup && (earthGroup.rotation.y += 0.001)
 
   if(satellite) {
     if (progress <= 1 - velocity) {
@@ -364,6 +420,23 @@ const render = (): void => {
     } else {
       progress = 0
     }
+  }
+
+  // 涟漪动画
+  if(wareArr.length) {
+    wareArr.forEach((ware: any) => {
+      ware._s += 0.007;
+      ware.scale.set( ware.size * ware._s, ware.size * ware._s, ware.size * ware._s );
+      if (ware._s <= 1.5) {
+        //mesh._s=1，透明度=0 mesh._s=1.5，透明度=1
+        ware.material.opacity = ( ware._s - 1 ) * 2;
+      } else if (ware._s > 1.5 && ware._s <= 2) {
+        //mesh._s=1.5，透明度=1 mesh._s=2，透明度=0
+        ware.material.opacity = 1 - ( ware._s - 1.5 ) * 2;
+      } else {
+        ware._s = 1.0;
+      }
+    })
   }
 
   requestAnimationFrame(render);
