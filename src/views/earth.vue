@@ -65,11 +65,11 @@ const lnglatData = [
   },
   {
     lnglat: [[100.22, 26.72], [35.75, -6.17]],
-    color: 'rgb(248, 223, 114)'
+    color: 'rgb(255, 20, 147)'
   },
   {
     lnglat: [[119.36, 26.13], [-56.89, -14.54]],
-    color: 'rgb(16, 31, 48)'
+    color: 'rgb(255, 153, 0)'
   }
 ]
 
@@ -375,23 +375,26 @@ const drawPointOnEarth = (): void => {
 
     const from = lglnToxyz(lnglatData[i].lnglat[0][0], lnglatData[i].lnglat[0][1], 5.1)
     const to = lglnToxyz(lnglatData[i].lnglat[1][0], lnglatData[i].lnglat[1][1], 5.1)
-    createRayLine(from, to, lnglatData[i].color)
+    createRayLine(from, to)
   }
   scene.add(localtionGroup)
 }
 
-const createRayLine = (from: THREE.Vector3, to: THREE.Vector3, color: string): void => {
-  
-}
+const createRayLine = (v0: THREE.Vector3, v3: THREE.Vector3): void => {
+  // 计算夹角
+  let a = new THREE.Vector3(100, 0, 0)
+  let b = new THREE.Vector3(-100, 0, 0)
+  console.log(a.angleTo(b))
 
-const getVCenter = (v1: THREE.Vector3, v2: THREE.Vector3): THREE.Vector3 => {
-  const v = v1.add( v2 );
-  return v.divideScalar( 2 );
-}
-
-const getLenVcetor = (v1: THREE.Vector3, v2: THREE.Vector3, len: number): THREE.Vector3 => {
-  const v1v2Len = v1.distanceTo( v2 );
-  return v1.lerp( v2, len / v1v2Len );
+  // const curve: THREE.CubicBezierCurve3 = new THREE.CubicBezierCurve3( v0, v1, v2, v3 );
+  // const points: THREE.Vector3[] = curve.getSpacedPoints( 100 );
+  // const lineGeo: THREE.BufferGeometry = new THREE.BufferGeometry().setFromPoints(points)
+  // const lineMaterial = new THREE.LineBasicMaterial( {
+  //   color: 0xffffff,
+  //   linewidth: 1,
+  // });
+  // const line: THREE.Line = new THREE.Line(lineGeo, lineMaterial)
+  // scene.add(line)
 }
 
 const render = (): void => {
@@ -425,7 +428,7 @@ const render = (): void => {
   // 涟漪动画
   if(wareArr.length) {
     wareArr.forEach((ware: any) => {
-      ware._s += 0.007;
+      ware._s += 0.01;
       ware.scale.set( ware.size * ware._s, ware.size * ware._s, ware.size * ware._s );
       if (ware._s <= 1.5) {
         //mesh._s=1，透明度=0 mesh._s=1.5，透明度=1
