@@ -26,6 +26,7 @@ import Stats from "stats.js"
 import gsap from "gsap";
 import { nextTick, ref } from "vue"
 import { getAssetsFile } from "../utils"
+import { Vector3 } from "three"
 
 const canvas = ref<any>(null); // 画布
 let scene: THREE.Scene; // 场景
@@ -381,20 +382,33 @@ const drawPointOnEarth = (): void => {
 }
 
 const createRayLine = (v0: THREE.Vector3, v3: THREE.Vector3): void => {
-  // 计算夹角
-  let a = new THREE.Vector3(100, 0, 0)
-  let b = new THREE.Vector3(-100, 0, 0)
-  console.log(a.angleTo(b))
+  // v0.angleTo(v3)计算v0和v3之间的夹角，单位为弧度，(弧度 * 180) / Math.PI 将弧度转化为角度，单位为度
+  const angle: number = (v0.angleTo(v3) * 180) / Math.PI;
+  const horizontal: number = angle * 2.5; // 计算控制点的水平距离，将夹角 * 常数(这个常数是个经验值，根据实际情况调整，它的作用是控制曲线的弯曲程度)
+  const vertical: number = angle * angle * 50; // 计算了控制点的垂直距离，将夹角的平方 * 常数(这个常数是个经验值，根据实际情况调整，它的作用是控制曲线的高度)
+  const p0: THREE.Vector3 = new THREE.Vector3(0, 0, 0); // 法线向量，球心
+  const centerPoint: THREE.Vector3 = v0.add(v3).divideScalar(2); // 计算起始点到终止点两点间的中间点，即两向量的平均值
+  const rayLine: THREE.Ray = new THREE.Ray(p0, centerPoint); // 用于检测是否与球体相交
+  let vtop = new THREE.Vector3();
+  vtop.lerpVectors(p0, rayLine.at(1, new THREE.Vector3()), vertical / rayLine.at(1, new THREE.Vector3()).distanceTo(p0));
 
-  // const curve: THREE.CubicBezierCurve3 = new THREE.CubicBezierCurve3( v0, v1, v2, v3 );
-  // const points: THREE.Vector3[] = curve.getSpacedPoints( 100 );
-  // const lineGeo: THREE.BufferGeometry = new THREE.BufferGeometry().setFromPoints(points)
-  // const lineMaterial = new THREE.LineBasicMaterial( {
-  //   color: 0xffffff,
-  //   linewidth: 1,
-  // });
-  // const line: THREE.Line = new THREE.Line(lineGeo, lineMaterial)
-  // scene.add(line)
+  let v1 = getLenVcetor(v0.clone(), vtop, horizontal);      
+  let v2 = getLenVcetor(v3.clone(), vtop, horizontal);  
+
+  const curve: THREE.CubicBezierCurve3 = new THREE.CubicBezierCurve3( v0, v1, v2, v3 );
+  const points: THREE.Vector3[] = curve.getSpacedPoints( 100 );
+  const lineGeo: THREE.BufferGeometry = new THREE.BufferGeometry().setFromPoints(points)
+  const lineMaterial = new THREE.LineBasicMaterial( {
+    color: 0xffffff,
+    linewidth: 1,
+  });
+  const line: THREE.Line = new THREE.Line(lineGeo, lineMaterial)
+  scene.add(line)
+}
+
+const getLenVcetor = (v1: THREE.Vector3, v2: THREE.Vector3, len: number) => {   
+    let v1v2Len = v1.distanceTo(v2);   
+    return v1.lerp(v2, len / v1v2Len);
 }
 
 const render = (): void => {
