@@ -73,6 +73,7 @@ const lnglatData = [
     color: 'rgb(255, 153, 0)'
   }
 ]
+const flyLineArr: THREE.Line[] = []
 
 manager.onProgress = function(item, loaded, total) {
   let value = loaded / total * 100
@@ -376,39 +377,65 @@ const drawPointOnEarth = (): void => {
 
     const from = lglnToxyz(lnglatData[i].lnglat[0][0], lnglatData[i].lnglat[0][1], 5.1)
     const to = lglnToxyz(lnglatData[i].lnglat[1][0], lnglatData[i].lnglat[1][1], 5.1)
-    createRayLine(from, to)
+    createFlyLine(from, to, lnglatData[i].color)
   }
   scene.add(localtionGroup)
 }
 
-const createRayLine = (v0: THREE.Vector3, v3: THREE.Vector3): void => {
+const createFlyLine = (v0: THREE.Vector3, v3: THREE.Vector3, color: string): void => {
   // v0.angleTo(v3)计算v0和v3之间的夹角，单位为弧度，(弧度 * 180) / Math.PI 将弧度转化为角度，单位为度
   const angle: number = (v0.angleTo(v3) * 180) / Math.PI;
-  const horizontal: number = angle * 2.5; // 计算控制点的水平距离，将夹角 * 常数(这个常数是个经验值，根据实际情况调整，它的作用是控制曲线的弯曲程度)
-  const vertical: number = angle * angle * 50; // 计算了控制点的垂直距离，将夹角的平方 * 常数(这个常数是个经验值，根据实际情况调整，它的作用是控制曲线的高度)
+  const horizontal: number = angle * 0.04; // 计算控制点的水平距离，将夹角 * 常数(这个常数是个经验值，根据实际情况调整，它的作用是控制曲线的弯曲程度)
+  const vertical: number = angle * angle * 0.1; // 计算了控制点的垂直距离，将夹角的平方 * 常数(这个常数是个经验值，根据实际情况调整，它的作用是控制曲线的高度)
   const p0: THREE.Vector3 = new THREE.Vector3(0, 0, 0); // 法线向量，球心
-  const centerPoint: THREE.Vector3 = v0.add(v3).divideScalar(2); // 计算起始点到终止点两点间的中间点，即两向量的平均值
+  const centerPoint: THREE.Vector3 = v0.clone().add(v3.clone()).divideScalar(2); // 计算起始点到终止点两点间的中间点，即两向量的平均值
   const rayLine: THREE.Ray = new THREE.Ray(p0, centerPoint); // 用于检测是否与球体相交
-  let vtop = new THREE.Vector3();
-  vtop.lerpVectors(p0, rayLine.at(1, new THREE.Vector3()), vertical / rayLine.at(1, new THREE.Vector3()).distanceTo(p0));
+  const temp = new THREE.Vector3(); // rayLine.at需要传两个参数，所以这里创建一个临时变量
+  // rayLine.at获取Ray对象起点与终点之间的向量并储存在temp中
+  // 从给定点p0开始，沿着给定方向（由Ray对象表示）上的一条射线上，到该射线与垂线所在平面的交点的计算
+  let vtop = rayLine.at( vertical / rayLine.at( 1, temp ).distanceTo( p0 ), temp );
 
-  let v1 = getLenVcetor(v0.clone(), vtop, horizontal);      
-  let v2 = getLenVcetor(v3.clone(), vtop, horizontal);  
+  // lerp方法v0到vtop和horizontal / v0.clone().distanceTo(vtop)之间进行插值
+  // v0.clone().distanceTo(vtop) 表示向量 v0 到向量 vtop 之间的距离，也就是线段 v0 和 vtop 的长度
+  // 将 horizontal 除以线段的长度，实际上是在计算一个在 v0 到 vtop 这条线段上的相对位置，这个相对位置是以 horizontal 所表示的距离来度量的
+  // 具体来说，horizontal 可以看作是线段长度的一个比例因子。当 horizontal 的值为 0 时
+  // 所得到的向量就是 v0，当 horizontal 的值为线段长度时，所得到的向量就是 vtop。当 horizontal 的值为线段长度的一半时
+  // 所得到的向量就是线段的中点。因此，horizontal / v0.clone().distanceTo(vtop) 表示在 v0 到 vtop 这条线段上的相对位置
+  // 这个位置是由 horizontal 和线段长度共同决定的
+  let v1 = v0.clone().lerp(vtop, horizontal / v0.clone().distanceTo(vtop));      
+  let v2 = v3.clone().lerp(vtop, horizontal / v3.clone().distanceTo(vtop));  
 
   const curve: THREE.CubicBezierCurve3 = new THREE.CubicBezierCurve3( v0, v1, v2, v3 );
-  const points: THREE.Vector3[] = curve.getSpacedPoints( 100 );
+  const points: THREE.Vector3[] = curve.getSpacedPoints( 1000 );
   const lineGeo: THREE.BufferGeometry = new THREE.BufferGeometry().setFromPoints(points)
   const lineMaterial = new THREE.LineBasicMaterial( {
-    color: 0xffffff,
+    color: new THREE.Color('rgb(255, 255, 255)'),
     linewidth: 1,
+    transparent: true,
+    opacity: 0
   });
   const line: THREE.Line = new THREE.Line(lineGeo, lineMaterial)
   scene.add(line)
-}
 
-const getLenVcetor = (v1: THREE.Vector3, v2: THREE.Vector3, len: number) => {   
-    let v1v2Len = v1.distanceTo(v2);   
-    return v1.lerp(v2, len / v1v2Len);
+  const index = 0, num = 50 // 从0开始，每次取50个点的数量
+  let flyLinePoints = points.splice(index, index + num) // 从曲线上取一段
+  let flyLineGeo = new THREE.BufferGeometry().setFromPoints(flyLinePoints);
+  (flyLineGeo as any).points = points;
+  (flyLineGeo as any).num = num;
+  (flyLineGeo as any)._index = index;
+  let colorArr = [];
+  for (let i = 0; i < flyLinePoints.length; i++) {
+    const lineColor = new THREE.Color(color)
+    colorArr.push(lineColor.r, lineColor.g, lineColor.b);
+  }
+  flyLineGeo.attributes.color = new THREE.BufferAttribute(new Float32Array(colorArr), 3);
+  var flyLineMaterial = new THREE.LineBasicMaterial({
+    vertexColors: true,
+    linewidth: 3.0,
+  });
+  var flyLine = new THREE.Line(flyLineGeo, flyLineMaterial);
+  flyLineArr.push(flyLine)
+  scene.add(flyLine);
 }
 
 const render = (): void => {
@@ -437,6 +464,24 @@ const render = (): void => {
     } else {
       progress = 0
     }
+  }
+
+  if(flyLineArr.length) {
+    flyLineArr.forEach(flyLine => {
+      let flyLineGeo = flyLine.geometry
+      let points = (flyLineGeo as any).points
+      let p = JSON.parse(JSON.stringify(points))
+      let num = (flyLineGeo as any).num
+
+      let flyLinePoints = p.splice((flyLineGeo as any)._index, (flyLineGeo as any)._index + num)
+      flyLineGeo.setFromPoints(flyLinePoints)
+
+      if((flyLineGeo as any)._index < points.length) {
+        (flyLineGeo as any)._index += 1
+      } else {
+        (flyLineGeo as any)._index = 0
+      }
+    })
   }
 
   // 涟漪动画
