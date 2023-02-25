@@ -26,7 +26,6 @@ import Stats from "stats.js"
 import gsap from "gsap";
 import { nextTick, ref } from "vue"
 import { getAssetsFile } from "../utils"
-import { Vector3 } from "three"
 
 const canvas = ref<any>(null); // 画布
 let scene: THREE.Scene; // 场景
@@ -57,20 +56,28 @@ const lnglatData = [
     color: 'rgb(192, 44, 56)'
   },
   {
-    lnglat: [[113.26, 23.13], [169.14, 67.74]],
+    lnglat: [[116.40, 39.91], [169.14, 67.74]],
     color: 'rgb(129, 60, 133)'
   },
   {
-    lnglat: [[101.78, 36.54], [22.90, 51.23]],
+    lnglat: [[116.40, 39.91], [22.90, 51.23]],
     color: 'rgb(32, 161, 98)'
   },
   {
-    lnglat: [[100.22, 26.72], [35.75, -6.17]],
+    lnglat: [[116.40, 39.91], [35.75, -6.17]],
     color: 'rgb(255, 20, 147)'
   },
   {
-    lnglat: [[119.36, 26.13], [-56.89, -14.54]],
+    lnglat: [[116.40, 39.91], [-56.89, -14.54]],
     color: 'rgb(255, 153, 0)'
+  },
+  {
+    lnglat: [[116.40, 39.91], [58.48, 40.74]],
+    color: 'rgb(0, 255, 255)'
+  },
+  {
+    lnglat: [[116.40, 39.91], [76.77, 12.93]],
+    color: 'rgb(75, 0, 130)'
   }
 ]
 const flyLineArr: THREE.Line[] = []
@@ -88,11 +95,16 @@ manager.onProgress = function(item, loaded, total) {
         ease: "Power2.inOut",
         duration: 1,
       })
-      // gsap.to(earthGroup.rotation, {
-      //   y: 10,
-      //   ease: "Power2.inOut",
-      //   duration: 2,
-      // })
+      gsap.to(earthGroup.rotation, {
+        y: 10,
+        ease: "Power2.inOut",
+        duration: 2,
+        onComplete() {
+          if(flyLineArr.length === 0) {
+            drawPointOnEarth();
+          }
+        }
+      })
     }, 1000)
   }
 };
@@ -111,7 +123,6 @@ nextTick(() => {
   createStarOrbit();
   createMoveTrack();
   createSatellite();
-  drawPointOnEarth();
 
   meshGroup.position.set(0, 0, -100)
   scene.add(meshGroup)
@@ -237,7 +248,7 @@ const createEarth = () => {
   const cloud: THREE.Mesh = new THREE.Mesh(cloudGeo, cloudMaterial)
   earthGroup.add(cloud)
 
-  // earthGroup.rotation.set( 0.6, 3.0, 0.1 );
+  earthGroup.rotation.set( 0.5, 0, -0.4 );
 
   meshGroup.add(earthGroup)
   scene.add(meshGroup)
@@ -369,6 +380,7 @@ const createEarthPoint = (localton: THREE.Vector3, color: string): THREE.Group =
 
 const drawPointOnEarth = (): void => {
   const localtionGroup: THREE.Group = new THREE.Group();
+  const flyLineGroup: THREE.Group = new THREE.Group()
   for(let i  = 0; i < lnglatData.length; i++) {
     lnglatData[i].lnglat.forEach((lnglat: number[]) => {
       const xyz = lglnToxyz(lnglat[0], lnglat[1], 5.1)
@@ -377,12 +389,12 @@ const drawPointOnEarth = (): void => {
 
     const from = lglnToxyz(lnglatData[i].lnglat[0][0], lnglatData[i].lnglat[0][1], 5.1)
     const to = lglnToxyz(lnglatData[i].lnglat[1][0], lnglatData[i].lnglat[1][1], 5.1)
-    createFlyLine(from, to, lnglatData[i].color)
+    flyLineGroup.add(createFlyLine(from, to))
   }
-  scene.add(localtionGroup)
+  earthGroup.add(localtionGroup, flyLineGroup)
 }
 
-const createFlyLine = (v0: THREE.Vector3, v3: THREE.Vector3, color: string): void => {
+const createFlyLine = (v0: THREE.Vector3, v3: THREE.Vector3): THREE.Line => {
   // v0.angleTo(v3)计算v0和v3之间的夹角，单位为弧度，(弧度 * 180) / Math.PI 将弧度转化为角度，单位为度
   const angle: number = (v0.angleTo(v3) * 180) / Math.PI;
   const horizontal: number = angle * 0.04; // 计算控制点的水平距离，将夹角 * 常数(这个常数是个经验值，根据实际情况调整，它的作用是控制曲线的弯曲程度)
@@ -406,7 +418,7 @@ const createFlyLine = (v0: THREE.Vector3, v3: THREE.Vector3, color: string): voi
   let v2 = v3.clone().lerp(vtop, horizontal / v3.clone().distanceTo(vtop));  
 
   const curve: THREE.CubicBezierCurve3 = new THREE.CubicBezierCurve3( v0, v1, v2, v3 );
-  const points: THREE.Vector3[] = curve.getSpacedPoints( 1000 );
+  const points: THREE.Vector3[] = curve.getSpacedPoints( 100 );
   const lineGeo: THREE.BufferGeometry = new THREE.BufferGeometry().setFromPoints(points)
   const lineMaterial = new THREE.LineBasicMaterial( {
     color: new THREE.Color('rgb(255, 255, 255)'),
@@ -417,25 +429,20 @@ const createFlyLine = (v0: THREE.Vector3, v3: THREE.Vector3, color: string): voi
   const line: THREE.Line = new THREE.Line(lineGeo, lineMaterial)
   scene.add(line)
 
-  const index = 0, num = 50 // 从0开始，每次取50个点的数量
+  const index = 0, num = 5 // 从0开始，每次取10个点的数量
   let flyLinePoints = points.splice(index, index + num) // 从曲线上取一段
   let flyLineGeo = new THREE.BufferGeometry().setFromPoints(flyLinePoints);
   (flyLineGeo as any).points = points;
   (flyLineGeo as any).num = num;
   (flyLineGeo as any)._index = index;
-  let colorArr = [];
-  for (let i = 0; i < flyLinePoints.length; i++) {
-    const lineColor = new THREE.Color(color)
-    colorArr.push(lineColor.r, lineColor.g, lineColor.b);
-  }
-  flyLineGeo.attributes.color = new THREE.BufferAttribute(new Float32Array(colorArr), 3);
   var flyLineMaterial = new THREE.LineBasicMaterial({
-    vertexColors: true,
-    linewidth: 3.0,
+    linewidth: 1,
+    color: new THREE.Color('rgb(254, 215, 26)')
   });
   var flyLine = new THREE.Line(flyLineGeo, flyLineMaterial);
-  flyLineArr.push(flyLine)
-  scene.add(flyLine);
+  flyLineArr.push(flyLine);
+
+  return flyLine;
 }
 
 const render = (): void => {
