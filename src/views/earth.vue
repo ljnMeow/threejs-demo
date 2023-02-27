@@ -428,7 +428,9 @@ const createEarthPoint = (localton: THREE.Vector3, color: string): THREE.Group =
 }
 
 const drawPointOnEarth = (): void => {
+  // 标点集合
   const localtionGroup: THREE.Group = new THREE.Group();
+  // 飞线集合
   const flyLineGroup: THREE.Group = new THREE.Group()
   for(let i  = 0; i < lnglatData.length; i++) {
     lnglatData[i].lnglat.forEach((lnglat: number[]) => {
@@ -454,7 +456,7 @@ const createFlyLine = (v0: THREE.Vector3, v3: THREE.Vector3): THREE.Line => {
   const p0: THREE.Vector3 = new THREE.Vector3(0, 0, 0); 
   // 计算起始点到终止点两点间的中间点，即两向量的平均值
   const centerPoint: THREE.Vector3 = v0.clone().add(v3.clone()).divideScalar(2); 
-  // 用于检测是否与球体相交
+  // 从圆心到中间点形成无穷远的射线
   const rayLine: THREE.Ray = new THREE.Ray(p0, centerPoint); 
   // rayLine.at需要传两个参数，所以这里创建一个临时变量
   const temp = new THREE.Vector3(); 
@@ -517,7 +519,8 @@ const render = (): void => {
     stars.rotation.y += 0.0009;
     stars.rotation.z -= 0.0003;
   }
-
+  
+  // 卫星公转
   if(satellite) {
     if (progress <= 1 - velocity) {
       const satelliteMovePosition  = curve.getPointAt(progress + velocity)
@@ -527,7 +530,8 @@ const render = (): void => {
       progress = 0
     }
   }
-
+    
+  // 飞线动画
   if(flyLineArr.length) {
     flyLineArr.forEach(flyLine => {
       let flyLineGeo = flyLine.geometry
