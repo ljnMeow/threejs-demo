@@ -180,18 +180,24 @@ const initLight = (): void => {
 
 const createStar = (): void => {
   let geometry: THREE.BufferGeometry = new THREE.BufferGeometry();
+  // 顶点集合
   let vertices: Float32Array = new Float32Array(starCount * 3);
+  // 随机颜色集合
   let colors: Float32Array = new Float32Array(starCount * 3);
 
   for (let i = 0; i < starCount; i++) {
+    // -500 ～ 500之间随机数
     let x = (Math.random() - 0.5) * 1000;
     let y = (Math.random() - 0.5) * 1000;
     let z = (Math.random() - 0.5) * 1000;
+
     vertices[i * 3 + 0] = x;
     vertices[i * 3 + 1] = y;
     vertices[i * 3 + 2] = z;
 
+    // 随机颜色
     let color: THREE.Color = new THREE.Color();
+    // setHSL(‘色调', '亮度', ‘饱和‘) 三个参数皆在[0, 1]之间
     color.setHSL(Math.random() * 0.2 + 0.5, 0.55, Math.random() * 0.25 + 0.55);
     colors[i * 3 + 0] = color.r;
     colors[i * 3 + 1] = color.g;
@@ -204,14 +210,14 @@ const createStar = (): void => {
   let starTexture: THREE.Texture = textureLoader.load(getAssetsFile("star.png"));
   let starMaterial = new THREE.PointsMaterial({
     map: starTexture,
-    size: 1,
-    transparent: true,
-    opacity: 1,
-    vertexColors: true,
-    depthTest: true,
-    depthWrite: false,
-    blending: THREE.AdditiveBlending,
-    sizeAttenuation: true,
+    size: 1, // 点大小
+    transparent: true, // 材质透明
+    opacity: 1, // 透明度
+    vertexColors: true, // 顶点着色
+    depthTest: true, // 是否在渲染此材质时启用深度测试
+    depthWrite: false, // 渲染此材质是否对深度缓冲区有任何影响
+    blending: THREE.AdditiveBlending, // 材质混合
+    sizeAttenuation: true, // 点的大小是否因相机深度而衰减
   });
   stars = new THREE.Points(geometry, starMaterial);
 
@@ -219,23 +225,28 @@ const createStar = (): void => {
 };
 
 const createEarth = () => {
+  // 地球
+  // 创建球形几何体
   const earthGeo: THREE.SphereGeometry = new THREE.SphereGeometry(5, 32, 32);
+  // 贴图加载
   const earthTexture: THREE.Texture = textureLoader.load(getAssetsFile("earth/earth.png"));
   const earthBumpTexture: THREE.Texture = textureLoader.load(getAssetsFile("earth/earth_bump.png"));
   const earthSpecTexture: THREE.Texture = textureLoader.load(getAssetsFile("earth/earth_spec.png"));
+  // 高光材质
   const earthMaterial: THREE.MeshPhongMaterial = new THREE.MeshPhongMaterial({
-    map: earthTexture,
-    bumpMap: earthBumpTexture,
-    bumpScale: 0.15,
-    specularMap: earthSpecTexture,
-    specular: new THREE.Color("#909090"),
-    shininess: 5,
-    transparent: true,
-    side: THREE.DoubleSide
+    map: earthTexture, // 贴图
+    bumpMap: earthBumpTexture, // 凹凸贴图纹理
+    bumpScale: 0.15, // 凹凸贴图会对材质产生多大影响 0～1
+    specularMap: earthSpecTexture, // 镜面反射贴图
+    specular: new THREE.Color("#909090"), // 材质的高光颜色
+    shininess: 5, // 高亮的程度，越高越亮
+    transparent: true, // 材质透明
+    side: THREE.DoubleSide // 定义将要渲染哪一面，THREE.DoubleSide是两面
   });
   const earth: THREE.Mesh = new THREE.Mesh(earthGeo, earthMaterial)
   earthGroup.add(earth)
 
+  // 大气层
   const cloudGeo: THREE.SphereGeometry = new THREE.SphereGeometry(5.1, 40, 40)
   const cloudTexture: THREE.Texture = textureLoader.load(getAssetsFile("earth/earth_cloud.png"));
   const cloudMaterial: THREE.MeshPhongMaterial = new THREE.MeshPhongMaterial({
@@ -248,6 +259,7 @@ const createEarth = () => {
   const cloud: THREE.Mesh = new THREE.Mesh(cloudGeo, cloudMaterial)
   earthGroup.add(cloud)
 
+  // 设置地球组转向
   earthGroup.rotation.set( 0.5, 0, -0.4 );
 
   meshGroup.add(earthGroup)
