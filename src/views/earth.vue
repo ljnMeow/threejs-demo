@@ -267,10 +267,10 @@ const createEarth = () => {
 };
 
 const createStarOrbit = (): void => {
+  // 创建环形几何体
 	const torusGeo: THREE.TorusGeometry = new THREE.TorusGeometry(8.0, 0.2, 2, 200)
   const torusMaterial: THREE.MeshBasicMaterial = new THREE.MeshBasicMaterial({
     color: new THREE.Color("rgb(147, 181, 207)"),
-    wireframe: false,
     transparent: true,
     opacity: 0.4
   });
@@ -278,11 +278,14 @@ const createStarOrbit = (): void => {
   torus.rotation.set( 1.7, 0.5, 1 );
   torus.updateMatrix();
 
+  // 效果合成器，是Three.js中的一个后期处理效果库。EffectComposer允许您将多个RenderPass组合在一起，以创建复杂的后期处理效果
   composer = new EffectComposer( renderer )
 
+  // 通用的渲染器通道，用于将场景渲染到纹理或屏幕上
   const renderPass: RenderPass = new RenderPass( scene, camera );
   composer.addPass( renderPass );
   
+  // 后期处理通道，可以在场景中的对象周围创建一个轮廓线
   const outlinePass: OutlinePass = new OutlinePass( new THREE.Vector2( canvas.value.clientWidth, canvas.value.clientHeight ), scene, camera );
   composer.addPass( outlinePass );
 
@@ -292,26 +295,49 @@ const createStarOrbit = (): void => {
   outlinePass.edgeStrength = 2; // 高光边缘强度
   outlinePass.edgeGlow = 1; // 边缘微光强度
   outlinePass.edgeThickness = 1; // 高光厚度
-  outlinePass.selectedObjects = [torus]; // 需要高光的Mesh
+  outlinePass.selectedObjects = [torus]; // 需要后期的Mesh
 
   meshGroup.add(torus)
 }
 
 const createMoveTrack = (): void => {
-  const length: number = 300, radius: number = 9, pointsArr: THREE.Vector3[] = [];
+  // number 轨迹环总长度  radius 轨迹环半径   centerPoint 圆心   pointsArr 向量组合
+  const length: number = 300, 
+        radius: number = 9, 
+        centerPoint = { x: 0, y: 0, z: 0 }, 
+        pointsArr: THREE.Vector3[] = [];
+
+  // 通过三角函数计算圆上点坐标
+  // 根据三角函数正弦、余弦求得，假设圆心**P(0, 0, 0)**，半径**r(9)**，一共**length300**个点，循环长度的到坐标位置**i**
+  // x = r * Math.sin(Math.PI * 2 * i / length) + p.x
+  // y = r * Math.cos(Math.PI * 2 * i / length) + p.y
   for (let i = 0; i <= length; i++) {
-    pointsArr.push(new THREE.Vector3(radius * Math.cos(Math.PI * 2 * i / length), radius * Math.sin(Math.PI * 2 * i / length), 0))
+    pointsArr.push(
+      new THREE.Vector3(
+        radius * Math.sin(Math.PI * 2 * i / length) + centerPoint.x,
+        radius * Math.cos(Math.PI * 2 * i / length) + centerPoint.y,
+        centerPoint.z
+      )
+    )
   }
+  // 3阶段贝塞尔曲线
   curve = new THREE.CatmullRomCurve3(pointsArr, true, 'catmullrom', 0.5);
+  // 分成50个点
   const points: THREE.Vector3[] = curve.getPoints(50);
+  // 建立轨迹线并设置完全透明隐藏起来
 	const lineGeo: THREE.BufferGeometry = new THREE.BufferGeometry().setFromPoints(points);
   const lineMaterial: THREE.LineBasicMaterial = new THREE.LineBasicMaterial({ transparent: true, opacity: 0 })
   const line = new THREE.Line(lineGeo, lineMaterial)
+  // 设置跟星轨一样的转向，这样到卫星看起来就会在轨迹环边运动
   line.rotation.set( 1.7, 0.5, 1 );
 
+  // 物体旋转移动后顶点不更新
+  // 创建一个四维矩阵
+  // 然后将torus.rotation创建一个旋转矩阵并赋值给matrix
+  // 最后将旋转矩阵应用于curve的顶点
+  // 通过applyMatrix4(matrix)方法，curve.points[i]对象的坐标会根据旋转矩阵matrix进行变换，从而实现旋转效果
   const matrix = new THREE.Matrix4();
   matrix.makeRotationFromEuler(torus.rotation);
-
   for (let i = 0; i < curve.points.length; i++) {
     curve.points[i].applyMatrix4(matrix);
   }
@@ -321,9 +347,11 @@ const createMoveTrack = (): void => {
 
 const createSatellite = (): void => {
   mTLLoader.load(getAssetsFile('satellite/Satellite.mtl'), (material) => {
+    // 预加载材质所需的所有纹理、贴图
     material.preload()
 
     objLoader.setMaterials(material).load(getAssetsFile('satellite/Satellite.obj'), (obj) => {
+      // 将轨迹路线的第一个坐标设置成卫星的初始位置
       obj.position.copy(curve.points[0])
       satellite = obj
       meshGroup.add(satellite)
@@ -332,9 +360,9 @@ const createSatellite = (): void => {
 }
 
 const lglnToxyz = (lg: number, lt: number, radius: number): THREE.Vector3 => {
-  // 竖直面
+  // theta是俯仰面（竖直面）内的角度，范围0~180度
   const theta = (90 + lg) * (Math.PI / 180)
-  // 水平面
+  // phi是方位面（水平面）内的角度，范围0~360度
   const phi = (90 - lt) * (Math.PI / 180)
   // 球坐标
   const spherical = new THREE.Spherical(radius, phi, theta)
@@ -347,8 +375,10 @@ const lglnToxyz = (lg: number, lt: number, radius: number): THREE.Vector3 => {
 }
 
 const createEarthPoint = (localton: THREE.Vector3, color: string): THREE.Group => {
+  // 新建一个标点组合
   const pointGroup: THREE.Group = new THREE.Group();
 
+  // 涟漪圈圈
   const waveGeo: THREE.PlaneGeometry = new THREE.PlaneGeometry( 0.3, 0.3 );
   const waveTexture: THREE.Texture = textureLoader.load(getAssetsFile("wave.png"));
   const waveMaterial: THREE.MeshBasicMaterial = new THREE.MeshBasicMaterial({
@@ -360,11 +390,14 @@ const createEarthPoint = (localton: THREE.Vector3, color: string): THREE.Group =
     depthWrite: false,
   })
   let waveMesh: THREE.Mesh = new THREE.Mesh(waveGeo, waveMaterial);
+  // 设置后期控制涟漪动画的大小和透明度阀值
   (waveMesh as any).size = 5.1 * 0.3;
   (waveMesh as any)._s = Math.random() * 1.0 + 1.0;
 
   wareArr.push(waveMesh)
 
+  // 标点光柱
+  // 使用CylinderGeometry创建一个圆锥形圆柱体
   const lightGeo: THREE.CylinderGeometry = new THREE.CylinderGeometry(0, 0.05, 0.5, 32)
   const lightTexture: THREE.Texture = textureLoader.load(getAssetsFile("lightray.png"))
   const lightMaterial: THREE.MeshBasicMaterial = new THREE.MeshBasicMaterial({
@@ -376,6 +409,7 @@ const createEarthPoint = (localton: THREE.Vector3, color: string): THREE.Group =
     depthWrite: false,
   })
   const lightMesh: THREE.Mesh = new THREE.Mesh(lightGeo, lightMaterial)
+  // 设置光柱的旋转和位置，让他竖立在涟漪圈上边
   lightMesh.rotateX(Math.PI / 2)
   lightMesh.position.z = 0.25
   
@@ -383,8 +417,11 @@ const createEarthPoint = (localton: THREE.Vector3, color: string): THREE.Group =
   pointGroup.add(waveMesh, lightMesh)
 
   pointGroup.position.set(localton.x, localton.y, localton.z)
+
+  // 调用normalize方法归一化向量，好处是保留了原向量信息而长度为1，在计算中更方便
   const coordVec3 = new THREE.Vector3( localton.x, localton.y, localton.z ).normalize();
   const meshNormal = new THREE.Vector3( 0, 0, 1 );
+  // setFromUnitVectors方法根据这两个向量计算并设置旋转四元数，使pointGroup中的物体朝向目标点
   pointGroup.quaternion.setFromUnitVectors( meshNormal, coordVec3 );
 
   return pointGroup
@@ -409,12 +446,18 @@ const drawPointOnEarth = (): void => {
 const createFlyLine = (v0: THREE.Vector3, v3: THREE.Vector3): THREE.Line => {
   // v0.angleTo(v3)计算v0和v3之间的夹角，单位为弧度，(弧度 * 180) / Math.PI 将弧度转化为角度，单位为度
   const angle: number = (v0.angleTo(v3) * 180) / Math.PI;
-  const horizontal: number = angle * 0.04; // 计算控制点的水平距离，将夹角 * 常数(这个常数是个经验值，根据实际情况调整，它的作用是控制曲线的弯曲程度)
-  const vertical: number = angle * angle * 0.1; // 计算了控制点的垂直距离，将夹角的平方 * 常数(这个常数是个经验值，根据实际情况调整，它的作用是控制曲线的高度)
-  const p0: THREE.Vector3 = new THREE.Vector3(0, 0, 0); // 法线向量，球心
-  const centerPoint: THREE.Vector3 = v0.clone().add(v3.clone()).divideScalar(2); // 计算起始点到终止点两点间的中间点，即两向量的平均值
-  const rayLine: THREE.Ray = new THREE.Ray(p0, centerPoint); // 用于检测是否与球体相交
-  const temp = new THREE.Vector3(); // rayLine.at需要传两个参数，所以这里创建一个临时变量
+  // 计算控制点的水平距离，将夹角 * 常数(这个常数是个经验值，根据实际情况调整，它的作用是控制曲线的弯曲程度)
+  const horizontal: number = angle * 0.04; 
+  // 计算了控制点的垂直距离，将夹角的平方 * 常数(这个常数是个经验值，根据实际情况调整，它的作用是控制曲线的高度)
+  const vertical: number = angle * angle * 0.1; 
+  // 法线向量，球心
+  const p0: THREE.Vector3 = new THREE.Vector3(0, 0, 0); 
+  // 计算起始点到终止点两点间的中间点，即两向量的平均值
+  const centerPoint: THREE.Vector3 = v0.clone().add(v3.clone()).divideScalar(2); 
+  // 用于检测是否与球体相交
+  const rayLine: THREE.Ray = new THREE.Ray(p0, centerPoint); 
+  // rayLine.at需要传两个参数，所以这里创建一个临时变量
+  const temp = new THREE.Vector3(); 
   // rayLine.at获取Ray对象起点与终点之间的向量并储存在temp中
   // 从给定点p0开始，沿着给定方向（由Ray对象表示）上的一条射线上，到该射线与垂线所在平面的交点的计算
   let vtop = rayLine.at( vertical / rayLine.at( 1, temp ).distanceTo( p0 ), temp );
@@ -441,8 +484,10 @@ const createFlyLine = (v0: THREE.Vector3, v3: THREE.Vector3): THREE.Line => {
   const line: THREE.Line = new THREE.Line(lineGeo, lineMaterial)
   scene.add(line)
 
-  const index = 0, num = 5 // 从0开始，每次取10个点的数量
-  let flyLinePoints = points.splice(index, index + num) // 从曲线上取一段
+  // 从0开始，每次取5个点的数量
+  const index = 0, num = 5 
+  // 从曲线上取一段
+  let flyLinePoints = points.splice(index, index + num) 
   let flyLineGeo = new THREE.BufferGeometry().setFromPoints(flyLinePoints);
   (flyLineGeo as any).points = points;
   (flyLineGeo as any).num = num;
@@ -472,8 +517,6 @@ const render = (): void => {
     stars.rotation.y += 0.0009;
     stars.rotation.z -= 0.0003;
   }
-
-  // earthGroup && (earthGroup.rotation.y += 0.001)
 
   if(satellite) {
     if (progress <= 1 - velocity) {
