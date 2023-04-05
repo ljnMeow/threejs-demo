@@ -25,7 +25,7 @@ import { MTLLoader } from 'three/examples/jsm/loaders/MTLLoader'
 import Stats from "stats.js"
 import gsap from "gsap";
 import { nextTick, ref } from "vue"
-import { getAssetsFile } from "../utils"
+import { getAssetsFile } from "../utils" 
 
 const canvas = ref<any>(null); // 画布
 let scene: THREE.Scene; // 场景
