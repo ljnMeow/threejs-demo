@@ -77,10 +77,10 @@ const initAxesHelper = (): void => {
 
 const initLight = (): void => {
   const ambientLight: THREE.AmbientLight = new THREE.AmbientLight(
-    new THREE.Color("rgb(255, 255, 255)")
+    new THREE.Color("rgb(203, 203, 232)")
   );
   const directionalLight: THREE.DirectionalLight = new THREE.DirectionalLight(
-    new THREE.Color("rgb(255, 255, 255)")
+    new THREE.Color("rgb(203, 203, 232)")
   );
   directionalLight.position.set(176, 137, 133)
 
