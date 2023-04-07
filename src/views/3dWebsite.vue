@@ -6,9 +6,8 @@
 import * as THREE from "three";
 import Stats from "stats.js";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
-import { FBXLoader } from "three/examples/jsm/loaders/FBXLoader";
-import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader'
-import { MTLLoader } from 'three/examples/jsm/loaders/MTLLoader'
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
+import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader";
 import { nextTick, ref } from "vue";
 import { getAssetsFile } from "../utils";
 
@@ -19,11 +18,15 @@ let renderer: THREE.WebGLRenderer; // 渲染器
 let controls: any; // 控制器
 let stats: any;
 const manager = new THREE.LoadingManager(); // 加载器管理器
+
 const textureLoader: THREE.TextureLoader = new THREE.TextureLoader(manager); // 纹理加载器
-const fbxLoader: FBXLoader = new FBXLoader(manager); // 模型加载器
-const objLoader: OBJLoader = new OBJLoader(manager) // OBJ模型加载器
-const mTLLoader: MTLLoader = new MTLLoader(manager) // MTL资源加载器
-let buildingGroup: THREE.Group = new THREE.Group();
+
+const dracoLoader: DRACOLoader = new DRACOLoader()
+dracoLoader.setDecoderPath("draco/");
+dracoLoader.preload();
+
+const gltfLoader: GLTFLoader = new GLTFLoader(manager)
+gltfLoader.setDRACOLoader( dracoLoader );
 
 nextTick(() => {
   initScene();
@@ -34,16 +37,27 @@ nextTick(() => {
   initStats();
   render();
   initLight();
-  loadBuildingModal();
+  loadBuildingModel();
 });
 
 const initScene = (): void => {
   scene = new THREE.Scene();
-  };
+
+  const skyBg = [
+    getAssetsFile("sky/posx.jpg"),
+    getAssetsFile("sky/negx.jpg"),
+    getAssetsFile("sky/posy.jpg"),
+    getAssetsFile("sky/negy.jpg"),
+    getAssetsFile("sky/posz.jpg"),
+    getAssetsFile("sky/negz.jpg"),
+  ];
+  const cubeLoader: THREE.CubeTextureLoader = new THREE.CubeTextureLoader();
+  scene.background = cubeLoader.load(skyBg);
+};
 
 const initCamera = (width: number, height: number): void => {
-  camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 3000);
-  camera.position.set(0, 0, 1000);
+  camera = new THREE.PerspectiveCamera(45, width / height, 0.01, 1000);
+  camera.position.set(0, 0, 50);
   scene.add(camera);
 };
 
@@ -65,19 +79,20 @@ const initLight = (): void => {
   const ambientLight: THREE.AmbientLight = new THREE.AmbientLight(
     new THREE.Color("rgb(255, 255, 255)")
   );
-  scene.add(ambientLight);
+  const directionalLight: THREE.DirectionalLight = new THREE.DirectionalLight(
+    new THREE.Color("rgb(255, 255, 255)")
+  );
+  directionalLight.position.set(176, 137, 133)
+
+  const helper = new THREE.DirectionalLightHelper( directionalLight, 5 );
+  scene.add(ambientLight, directionalLight, helper);
 };
 
-const loadBuildingModal = () => {
-  // 贴图加载
-  mTLLoader.load(getAssetsFile('building/Apartment_Building.mtl'), (material) => {
-    material.preload()
-
-    objLoader.setMaterials(material).load(getAssetsFile('building/Apartment_Building.obj'), (obj) => {
-      console.log(obj)
-      buildingGroup = obj
-      scene.add(buildingGroup)
-    })
+const loadBuildingModel = () => {
+  gltfLoader.load(getAssetsFile('building/building.glb'), gltf => {
+    console.log(gltf)
+    gltf.scene.scale.set(0.01, 0.01, 0.01)
+    scene.add(gltf.scene)
   })
 };
 
@@ -103,7 +118,7 @@ const initStats = (): void => {
 const render = (): void => {
   controls.update();
   renderer.render(scene, camera);
-  
+
   if (stats) {
     stats.update();
   }
