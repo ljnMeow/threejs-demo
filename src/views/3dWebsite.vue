@@ -77,15 +77,22 @@ const initAxesHelper = (): void => {
 
 const initLight = (): void => {
   const ambientLight: THREE.AmbientLight = new THREE.AmbientLight(
-    new THREE.Color("rgb(203, 203, 232)")
+    new THREE.Color("rgb(143, 178, 201)")
   );
-  const directionalLight: THREE.DirectionalLight = new THREE.DirectionalLight(
-    new THREE.Color("rgb(203, 203, 232)")
-  );
-  directionalLight.position.set(176, 137, 133)
 
-  const helper = new THREE.DirectionalLightHelper( directionalLight, 5 );
-  scene.add(ambientLight, directionalLight, helper);
+  const directionalLight1: THREE.DirectionalLight = new THREE.DirectionalLight(
+    new THREE.Color('rgb(255, 255, 255)'), 1
+  );
+  directionalLight1.position.set(100, 100, 50)
+  const directionalLightHelper1 = new THREE.DirectionalLightHelper( directionalLight1, 5 );
+
+  const directionalLight2: THREE.DirectionalLight = new THREE.DirectionalLight(
+    new THREE.Color('rgb(255, 255, 255)'), 1
+  );
+  directionalLight2.position.set(100, 20, -50)
+  const directionalLightHelper2 = new THREE.DirectionalLightHelper( directionalLight2, 5 );
+
+  scene.add(ambientLight, directionalLight1, directionalLight2, directionalLightHelper1, directionalLightHelper2);
 };
 
 const loadBuildingModel = () => {
@@ -108,6 +115,8 @@ const initControls = (): void => {
   controls.enablePan = true;
   //摄像机缩放的速度
   controls.zoomSpeed = 1.8;
+  
+  controls.maxPolarAngle = Math.PI / 2 - 0.01
 };
 
 const initStats = (): void => {
