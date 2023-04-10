@@ -1,5 +1,5 @@
 <template>
-  <div id="canvas" ref="canvas"></div>
+  <div id="canvas" ref="canvas" @click="getScene()"></div>
 </template>
 
 <script lang="ts" setup>
@@ -26,7 +26,7 @@ dracoLoader.setDecoderPath("draco/");
 dracoLoader.preload();
 
 const gltfLoader: GLTFLoader = new GLTFLoader(manager)
-gltfLoader.setDRACOLoader( dracoLoader );
+gltfLoader.setDRACOLoader(dracoLoader);
 
 nextTick(() => {
   initScene();
@@ -58,6 +58,10 @@ const initScene = (): void => {
 const initCamera = (width: number, height: number): void => {
   camera = new THREE.PerspectiveCamera(45, width / height, 0.01, 1000);
   camera.position.set(0, 0, 50);
+  // const newPosition = new THREE.Vector3(4.558849085731412, -9.212998893592337, -6.977738857515144)
+  // camera.position.copy(newPosition);
+  // const euler = new THREE.Euler(2.971646373395629, 0.9067281775286973, -3.0072716096582592, 'XYZ');
+  // camera.rotation.copy(euler)
   scene.add(camera);
 };
 
@@ -83,14 +87,14 @@ const initLight = (): void => {
   const directionalLight1: THREE.DirectionalLight = new THREE.DirectionalLight(
     new THREE.Color('rgb(255, 255, 255)'), 1
   );
-  directionalLight1.position.set(100, 100, 50)
-  const directionalLightHelper1 = new THREE.DirectionalLightHelper( directionalLight1, 5 );
+  directionalLight1.position.set(100, 20, 50)
+  const directionalLightHelper1 = new THREE.DirectionalLightHelper(directionalLight1, 5);
 
   const directionalLight2: THREE.DirectionalLight = new THREE.DirectionalLight(
     new THREE.Color('rgb(255, 255, 255)'), 1
   );
-  directionalLight2.position.set(100, 20, -50)
-  const directionalLightHelper2 = new THREE.DirectionalLightHelper( directionalLight2, 5 );
+  directionalLight2.position.set(100, 100, -10)
+  const directionalLightHelper2 = new THREE.DirectionalLightHelper(directionalLight2, 5);
 
   scene.add(ambientLight, directionalLight1, directionalLight2, directionalLightHelper1, directionalLightHelper2);
 };
@@ -115,9 +119,22 @@ const initControls = (): void => {
   controls.enablePan = true;
   //摄像机缩放的速度
   controls.zoomSpeed = 1.8;
-  
-  controls.maxPolarAngle = Math.PI / 2 - 0.01
+
+  // controls.maxPolarAngle = Math.PI / 2 - 0.01
 };
+
+const getScene = () => {
+  // console.log("camera", camera)
+  // console.log("controls", controls)
+  const target = controls.target.clone(); // 获取目标点
+
+  const distance = camera.position.distanceTo(target); // 计算相机到目标点的距离
+  const direction = camera.getWorldDirection(new THREE.Vector3()); // 获取相机的方向向量
+
+  const newPosition = new THREE.Vector3().copy(target).add(direction.multiplyScalar(distance)); // 根据方向向量和距离计算新位置
+  // camera.position.copy(newPosition); // 将新位置赋值给相机的位置属性
+  console.log(newPosition)
+}
 
 const initStats = (): void => {
   stats = new Stats();
@@ -128,16 +145,14 @@ const render = (): void => {
   controls.update();
   renderer.render(scene, camera);
 
-  if (stats) {
-    stats.update();
-  }
+  stats && stats.update()
 
   requestAnimationFrame(render);
 };
 
 window.addEventListener("resize", () => {
   // 更新摄像机
-  // camera.aspect = canvas.value.clientWidth / canvas.value.clientHeight;
+  camera.aspect = canvas.value.clientWidth / canvas.value.clientHeight;
   // 更新摄像机投影矩阵
   camera.updateProjectionMatrix();
   // 更新渲染器
