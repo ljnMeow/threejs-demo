@@ -57,11 +57,10 @@ const initScene = (): void => {
 
 const initCamera = (width: number, height: number): void => {
   camera = new THREE.PerspectiveCamera(45, width / height, 0.01, 1000);
-  camera.position.set(0, 0, 50);
-  // const newPosition = new THREE.Vector3(4.558849085731412, -9.212998893592337, -6.977738857515144)
-  // camera.position.copy(newPosition);
-  // const euler = new THREE.Euler(2.971646373395629, 0.9067281775286973, -3.0072716096582592, 'XYZ');
-  // camera.rotation.copy(euler)
+
+  const newPosition = new THREE.Vector3(9.5, -2.5, -8)
+  camera.position.copy(newPosition);
+
   scene.add(camera);
 };
 
@@ -87,13 +86,13 @@ const initLight = (): void => {
   const directionalLight1: THREE.DirectionalLight = new THREE.DirectionalLight(
     new THREE.Color('rgb(255, 255, 255)'), 1
   );
-  directionalLight1.position.set(100, 20, 50)
+  directionalLight1.position.set(50, 20, 85)
   const directionalLightHelper1 = new THREE.DirectionalLightHelper(directionalLight1, 5);
 
   const directionalLight2: THREE.DirectionalLight = new THREE.DirectionalLight(
     new THREE.Color('rgb(255, 255, 255)'), 1
   );
-  directionalLight2.position.set(100, 100, -10)
+  directionalLight2.position.set(50, 50, -140)
   const directionalLightHelper2 = new THREE.DirectionalLightHelper(directionalLight2, 5);
 
   scene.add(ambientLight, directionalLight1, directionalLight2, directionalLightHelper1, directionalLightHelper2);
@@ -101,8 +100,8 @@ const initLight = (): void => {
 
 const loadBuildingModel = () => {
   gltfLoader.load(getAssetsFile('building/building.glb'), gltf => {
-    console.log(gltf)
     gltf.scene.scale.set(0.01, 0.01, 0.01)
+    gltf.scene.position.set(0, -8.5, -3.5)
     scene.add(gltf.scene)
   })
 };
@@ -124,8 +123,8 @@ const initControls = (): void => {
 };
 
 const getScene = () => {
-  // console.log("camera", camera)
-  // console.log("controls", controls)
+  console.log("camera", camera)
+  console.log("controls", controls)
   const target = controls.target.clone(); // 获取目标点
 
   const distance = camera.position.distanceTo(target); // 计算相机到目标点的距离
