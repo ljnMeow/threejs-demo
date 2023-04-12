@@ -1,5 +1,5 @@
 <template>
-  <div id="canvas" ref="canvas" @click="getScene()"></div>
+  <div id="canvas" ref="canvas"></div>
 </template>
 
 <script lang="ts" setup>
@@ -69,6 +69,8 @@ const initRenderer = (width: number, height: number): void => {
     antialias: true, // 抗锯齿
   });
   renderer.setSize(width, height);
+  renderer.outputEncoding = THREE.sRGBEncoding;
+  renderer.toneMapping = THREE.LinearToneMapping;
   canvas.value.appendChild(renderer.domElement);
   renderer.render(scene, camera);
 };
@@ -80,26 +82,29 @@ const initAxesHelper = (): void => {
 
 const initLight = (): void => {
   const ambientLight: THREE.AmbientLight = new THREE.AmbientLight(
-    new THREE.Color("rgb(143, 178, 201)")
+    new THREE.Color("rgb(255, 255, 255)")
   );
 
-  const directionalLight1: THREE.DirectionalLight = new THREE.DirectionalLight(
-    new THREE.Color('rgb(255, 255, 255)'), 1
+  const directionalLight: THREE.DirectionalLight = new THREE.DirectionalLight(
+    new THREE.Color("rgb(255, 255, 255)"), 0.8
   );
-  directionalLight1.position.set(50, 20, 85)
-  const directionalLightHelper1 = new THREE.DirectionalLightHelper(directionalLight1, 5);
+  directionalLight.position.set(50, 20, 85)
+  const directionalLightHelper = new THREE.DirectionalLightHelper(directionalLight, 5);
 
-  const directionalLight2: THREE.DirectionalLight = new THREE.DirectionalLight(
-    new THREE.Color('rgb(255, 255, 255)'), 1
-  );
-  directionalLight2.position.set(50, 50, -140)
-  const directionalLightHelper2 = new THREE.DirectionalLightHelper(directionalLight2, 5);
-
-  scene.add(ambientLight, directionalLight1, directionalLight2, directionalLightHelper1, directionalLightHelper2);
+  scene.add(ambientLight, directionalLight, directionalLightHelper);
 };
 
 const loadBuildingModel = () => {
+  const envMap = textureLoader.load(getAssetsFile('building/sky7.jpg'))
   gltfLoader.load(getAssetsFile('building/building.glb'), gltf => {
+    console.log(gltf)
+    // gltf.scene.children.forEach(item => {
+    //   if(item instanceof THREE.Mesh && item.name === "AB1_OBJ_06") {
+    //     item.material.envMap = envMap
+    //     console.log(item.material)
+    //   }
+    // })
+
     gltf.scene.scale.set(0.01, 0.01, 0.01)
     gltf.scene.position.set(0, -8.5, -3.5)
     scene.add(gltf.scene)
@@ -121,19 +126,6 @@ const initControls = (): void => {
 
   // controls.maxPolarAngle = Math.PI / 2 - 0.01
 };
-
-const getScene = () => {
-  console.log("camera", camera)
-  console.log("controls", controls)
-  const target = controls.target.clone(); // 获取目标点
-
-  const distance = camera.position.distanceTo(target); // 计算相机到目标点的距离
-  const direction = camera.getWorldDirection(new THREE.Vector3()); // 获取相机的方向向量
-
-  const newPosition = new THREE.Vector3().copy(target).add(direction.multiplyScalar(distance)); // 根据方向向量和距离计算新位置
-  // camera.position.copy(newPosition); // 将新位置赋值给相机的位置属性
-  console.log(newPosition)
-}
 
 const initStats = (): void => {
   stats = new Stats();
