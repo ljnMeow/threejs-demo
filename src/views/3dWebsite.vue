@@ -53,10 +53,13 @@ const initScene = (): void => {
   ];
   const cubeLoader: THREE.CubeTextureLoader = new THREE.CubeTextureLoader();
   scene.background = cubeLoader.load(skyBg);
+
+  const envMap = textureLoader.load(getAssetsFile('building/sky7.jpg'))
+  scene.environment = envMap
 };
 
 const initCamera = (width: number, height: number): void => {
-  camera = new THREE.PerspectiveCamera(45, width / height, 0.01, 1000);
+  camera = new THREE.PerspectiveCamera(45, width / height, 1, 1000);
 
   const newPosition = new THREE.Vector3(9.5, -2.5, -8)
   camera.position.copy(newPosition);
@@ -70,7 +73,6 @@ const initRenderer = (width: number, height: number): void => {
   });
   renderer.setSize(width, height);
   renderer.outputEncoding = THREE.sRGBEncoding;
-  renderer.toneMapping = THREE.LinearToneMapping;
   canvas.value.appendChild(renderer.domElement);
   renderer.render(scene, camera);
 };
@@ -88,25 +90,17 @@ const initLight = (): void => {
   const directionalLight: THREE.DirectionalLight = new THREE.DirectionalLight(
     new THREE.Color("rgb(255, 255, 255)"), 0.8
   );
-  directionalLight.position.set(50, 20, 85)
+  directionalLight.position.set(110, 20, 85)
   const directionalLightHelper = new THREE.DirectionalLightHelper(directionalLight, 5);
 
   scene.add(ambientLight, directionalLight, directionalLightHelper);
 };
 
 const loadBuildingModel = () => {
-  const envMap = textureLoader.load(getAssetsFile('building/sky7.jpg'))
   gltfLoader.load(getAssetsFile('building/building.glb'), gltf => {
-    console.log(gltf)
-    // gltf.scene.children.forEach(item => {
-    //   if(item instanceof THREE.Mesh && item.name === "AB1_OBJ_06") {
-    //     item.material.envMap = envMap
-    //     console.log(item.material)
-    //   }
-    // })
-
     gltf.scene.scale.set(0.01, 0.01, 0.01)
     gltf.scene.position.set(0, -8.5, -3.5)
+    console.log(gltf)
     scene.add(gltf.scene)
   })
 };
