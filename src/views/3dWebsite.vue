@@ -10,6 +10,7 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader";
 import { nextTick, ref } from "vue";
 import { getAssetsFile } from "../utils";
+import gsap from "gsap";
 
 const canvas = ref<any>(null); // 画布
 let scene: THREE.Scene; // 场景
@@ -17,15 +18,17 @@ let camera: THREE.PerspectiveCamera; // 相机
 let renderer: THREE.WebGLRenderer; // 渲染器
 let controls: any; // 控制器
 let stats: any;
+let isMouseMove = ref<Boolean>(true); // 状态 控制鼠标移动画面是否交互
+let mouse: THREE.Vector2 = new THREE.Vector2(); // 鼠标二位坐标
 const manager = new THREE.LoadingManager(); // 加载器管理器
 
 const textureLoader: THREE.TextureLoader = new THREE.TextureLoader(manager); // 纹理加载器
 
-const dracoLoader: DRACOLoader = new DRACOLoader()
+const dracoLoader: DRACOLoader = new DRACOLoader();
 dracoLoader.setDecoderPath("draco/");
 dracoLoader.preload();
 
-const gltfLoader: GLTFLoader = new GLTFLoader(manager)
+const gltfLoader: GLTFLoader = new GLTFLoader(manager);
 gltfLoader.setDRACOLoader(dracoLoader);
 
 nextTick(() => {
@@ -53,15 +56,12 @@ const initScene = (): void => {
   ];
   const cubeLoader: THREE.CubeTextureLoader = new THREE.CubeTextureLoader();
   scene.background = cubeLoader.load(skyBg);
-
-  const envMap = textureLoader.load(getAssetsFile('building/sky7.jpg'))
-  scene.environment = envMap
 };
 
 const initCamera = (width: number, height: number): void => {
   camera = new THREE.PerspectiveCamera(45, width / height, 1, 1000);
 
-  const newPosition = new THREE.Vector3(9.5, -2.5, -8)
+  const newPosition = new THREE.Vector3(9.5, -2.5, -8);
   camera.position.copy(newPosition);
 
   scene.add(camera);
@@ -88,33 +88,40 @@ const initLight = (): void => {
   );
 
   const directionalLight: THREE.DirectionalLight = new THREE.DirectionalLight(
-    new THREE.Color("rgb(255, 255, 255)"), 0.8
+    new THREE.Color("rgb(255, 99, 71)"),
+    1
   );
-  directionalLight.position.set(110, 20, 85)
-  const directionalLightHelper = new THREE.DirectionalLightHelper(directionalLight, 5);
+  directionalLight.position.set(110, 20, 85);
+  const directionalLightHelper = new THREE.DirectionalLightHelper(
+    directionalLight,
+    5
+  );
 
   scene.add(ambientLight, directionalLight, directionalLightHelper);
 };
 
 const loadBuildingModel = () => {
-  gltfLoader.load(getAssetsFile('building/building.glb'), gltf => {
-    gltf.scene.scale.set(0.01, 0.01, 0.01)
-    gltf.scene.position.set(0, -8.5, -3.5)
-    console.log(gltf)
-    scene.add(gltf.scene)
-  })
+  gltfLoader.load(getAssetsFile("building/building.glb"), (gltf) => {
+    gltf.scene.scale.set(0.01, 0.01, 0.01);
+    gltf.scene.position.set(0, -8.5, -3.5);
+    console.log(gltf);
+    scene.add(gltf.scene);
+  });
 };
 
 const initControls = (): void => {
   controls = new OrbitControls(camera, renderer.domElement);
+
+  // 控制器是否相应
+  controls.enabled = false;
   // 使动画循环使用时阻尼或自转 意思是否有惯性
   controls.enableDamping = true;
   //是否可以缩放
-  controls.enableZoom = true;
+  controls.enableZoom = false;
   //是否自动旋转
   controls.autoRotate = false;
   //是否开启右键拖拽
-  controls.enablePan = true;
+  controls.enablePan = false;
   //摄像机缩放的速度
   controls.zoomSpeed = 1.8;
 
@@ -127,13 +134,37 @@ const initStats = (): void => {
 };
 
 const render = (): void => {
+  stats && stats.update();
+
   controls.update();
   renderer.render(scene, camera);
 
-  stats && stats.update()
-
   requestAnimationFrame(render);
 };
+
+const onDocumentMouseMove = (event: any) => {
+  if (isMouseMove.value) {
+    mouse.x = event.clientX / canvas.value.clientWidth - 0.5;
+    mouse.y = event.clientY / canvas.value.clientHeight - 0.5;
+
+    const mouseYPos = Math.min(Math.max(mouse.y + (-2.5), -2.7), -2.2)
+    const mouseXPos = Math.min(Math.max(mouse.x + (-8), -8.5), -7.5)
+
+    gsap.to(camera.position, {
+      y: mouseYPos,
+      ease: "Power2.inOut",
+      duration: 4,
+    })
+
+    gsap.to(camera.position, {
+      z: mouseXPos,
+      ease: "Power2.inOut",
+      duration: 4,
+    })
+  }
+};
+
+document.addEventListener("mousemove", onDocumentMouseMove, false);
 
 window.addEventListener("resize", () => {
   // 更新摄像机
