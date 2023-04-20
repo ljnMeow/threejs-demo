@@ -1,5 +1,10 @@
 <template>
   <div id="canvas" ref="canvas"></div>
+  <div class="website-view">
+    <div class="view-page">
+      <div class="title">3𝓓 𝓦𝓮𝓫𝓼𝓲𝓽𝓮 <br/> 𝓓𝓮𝓶𝓸</div>
+    </div>
+  </div>
 </template>
 
 <script lang="ts" setup>
@@ -37,7 +42,7 @@ nextTick(() => {
   initRenderer(canvas.value.clientWidth, canvas.value.clientHeight);
   initAxesHelper();
   initControls();
-  initStats();
+  // initStats();
   render();
   initLight();
   loadBuildingModel();
@@ -147,28 +152,32 @@ const onDocumentMouseMove = (event: any) => {
     mouse.x = event.clientX / canvas.value.clientWidth - 0.5;
     mouse.y = event.clientY / canvas.value.clientHeight - 0.5;
 
-    const mouseYPos = Math.min(Math.max(mouse.y + (-2.5), -2.7), -2.3)
-    const mouseXPos = Math.min(Math.max(mouse.x + (-8), -8.5), -7.5)
+    const mouseYPos = Math.min(Math.max(mouse.y + -2.5, -2.7), -2.3);
+    const mouseXPos = Math.min(Math.max(mouse.x + -8, -8.5), -7.5);
 
     gsap.to(camera.position, {
       y: mouseYPos,
       z: mouseXPos,
       ease: "Power2.inOut",
       duration: 2,
-    })
+    });
   }
 };
 
 document.addEventListener("mousemove", onDocumentMouseMove, false);
 
-document.addEventListener("mouseleave", () => {
-  gsap.to(camera.position, {
-    y: -2.5,
-    z: -8,
-    ease: "Power2.inOut",
-    duration: 2,
-  })
-}, false)
+document.addEventListener(
+  "mouseleave",
+  () => {
+    gsap.to(camera.position, {
+      y: -2.5,
+      z: -8,
+      ease: "Power2.inOut",
+      duration: 2,
+    });
+  },
+  false
+);
 
 window.addEventListener("resize", () => {
   // 更新摄像机
@@ -182,4 +191,29 @@ window.addEventListener("resize", () => {
 });
 </script>
 
-<style lang="less" scoped></style>
+<style lang="less" scoped>
+#canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: -1
+}
+.website-view {
+  .view-page {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    .title {
+      position: absolute;
+      top: 50%;
+      left: 10%;
+      transform: translateY(-50%);
+      font-size: 8vw;
+      font-family: 'Radiant';
+      letter-spacing: -6px;
+      line-height: 20vh;
+      color: #000000;
+    }
+  }
+}
+</style>
