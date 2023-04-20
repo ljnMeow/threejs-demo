@@ -2,7 +2,8 @@
   <div id="canvas" ref="canvas"></div>
   <div class="website-view">
     <div class="view-page">
-      <div class="title">3𝓓 𝓦𝓮𝓫𝓼𝓲𝓽𝓮 <br/> 𝓓𝓮𝓶𝓸</div>
+      <div class="title">𝟥𝒟 𝒲𝑒𝒷𝒮𝒾𝓉𝑒<br/> 𝒹𝑒𝓂𝑜</div>
+      <div class="start">↓</div>
     </div>
   </div>
 </template>
@@ -209,10 +210,22 @@ window.addEventListener("resize", () => {
       left: 10%;
       transform: translateY(-50%);
       font-size: 8vw;
-      font-family: 'Radiant';
-      letter-spacing: -6px;
-      line-height: 20vh;
-      color: #000000;
+      letter-spacing: -2px;
+      line-height: 8vw;
+      color: #a5a2a2;
+    }
+    .start {
+      position: absolute;
+      top: 70%;
+      left: 14%;
+      width: 60px;
+      height: 60px;
+      text-align: center;
+      line-height: 60px;
+      color: #724b40;
+      font-size: 40px;
+      border: 1px solid #724b40;
+      border-radius: 100%;
     }
   }
 }
