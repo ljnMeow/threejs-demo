@@ -2,9 +2,14 @@
   <div id="canvas" ref="canvas"></div>
   <div class="website-view">
     <div class="view-page">
-      <div class="title">𝟥𝒟 𝒲𝑒𝒷𝒮𝒾𝓉𝑒<br/> 𝒹𝑒𝓂𝑜</div>
-      <div class="start">↓</div>
+      <transition name="left">
+        <div class="title" v-if="showTitle">𝟥𝒟 𝒲𝑒𝒷𝒮𝒾𝓉𝑒<br /> 𝒹𝑒𝓂𝑜</div>
+      </transition>
+      <transition name="top">
+        <div class="start" v-if="showStart">↓</div>
+      </transition>
     </div>
+    <div class="view-page"></div>
   </div>
 </template>
 
@@ -37,6 +42,9 @@ dracoLoader.preload();
 const gltfLoader: GLTFLoader = new GLTFLoader(manager);
 gltfLoader.setDRACOLoader(dracoLoader);
 
+const showTitle = ref<Boolean>(false)
+const showStart = ref<Boolean>(false)
+
 nextTick(() => {
   initScene();
   initCamera(canvas.value.clientWidth, canvas.value.clientHeight);
@@ -47,6 +55,11 @@ nextTick(() => {
   render();
   initLight();
   loadBuildingModel();
+
+  setTimeout(() => {
+    showTitle.value = true
+    showStart.value = true
+  }, 1000)
 });
 
 const initScene = (): void => {
@@ -199,11 +212,13 @@ window.addEventListener("resize", () => {
   left: 0;
   z-index: -1
 }
+
 .website-view {
   .view-page {
     position: relative;
     width: 100vw;
     height: 100vh;
+
     .title {
       position: absolute;
       top: 50%;
@@ -213,20 +228,53 @@ window.addEventListener("resize", () => {
       letter-spacing: -2px;
       line-height: 8vw;
       color: #a5a2a2;
+      user-select: none;
     }
+
     .start {
       position: absolute;
       top: 70%;
       left: 14%;
-      width: 60px;
-      height: 60px;
+      width: 4vw;
+      height: 4vw;
       text-align: center;
-      line-height: 60px;
-      color: #724b40;
-      font-size: 40px;
+      line-height: 4vw;
+      color: #a5a2a2;
+      font-size: 20px;
       border: 1px solid #724b40;
       border-radius: 100%;
+      cursor: pointer;
+      user-select: none;
     }
+  }
+}
+
+
+.left-enter-active {
+  animation: left 1s linear 0s;
+}
+@keyframes left {
+  0% {
+    opacity: 0;
+    transform: translate(-100px, -50%);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(0, -50%);
+  }
+}
+
+.top-enter-active {
+  animation: top 1s linear 0s;
+}
+@keyframes top {
+  0% {
+    opacity: 0;
+    top: 100%;
+  }
+  100% {
+    opacity: 1;
+    top: 70%;
   }
 }
 </style>
