@@ -1,6 +1,6 @@
 <template>
   <div id="canvas" ref="canvas"></div>
-  <div class="website-view">
+  <!-- <div class="website-view">
     <div class="view-page">
       <transition name="left">
         <div class="title" v-if="showTitle">𝟥𝒟 𝒲𝑒𝒷𝒮𝒾𝓉𝑒<br /> 𝒹𝑒𝓂𝑜</div>
@@ -10,7 +10,7 @@
       </transition>
     </div>
     <div class="view-page"></div>
-  </div>
+  </div> -->
 </template>
 
 <script lang="ts" setup>
@@ -42,8 +42,8 @@ dracoLoader.preload();
 const gltfLoader: GLTFLoader = new GLTFLoader(manager);
 gltfLoader.setDRACOLoader(dracoLoader);
 
-const showTitle = ref<Boolean>(false)
-const showStart = ref<Boolean>(false)
+const showTitle = ref<Boolean>(false);
+const showStart = ref<Boolean>(false);
 
 nextTick(() => {
   initScene();
@@ -57,9 +57,9 @@ nextTick(() => {
   loadBuildingModel();
 
   setTimeout(() => {
-    showTitle.value = true
-    showStart.value = true
-  }, 1000)
+    showTitle.value = true;
+    showStart.value = true;
+  }, 1000);
 });
 
 const initScene = (): void => {
@@ -80,7 +80,7 @@ const initScene = (): void => {
 const initCamera = (width: number, height: number): void => {
   camera = new THREE.PerspectiveCamera(45, width / height, 1, 1000);
 
-  const newPosition = new THREE.Vector3(9.5, -2.5, -8);
+  const newPosition = new THREE.Vector3(0, -13, 48);
   camera.position.copy(newPosition);
 
   scene.add(camera);
@@ -110,7 +110,7 @@ const initLight = (): void => {
     new THREE.Color("rgb(255, 99, 71)"),
     1
   );
-  directionalLight.position.set(110, 20, 85);
+  directionalLight.position.set(-220, 30, 50);
   const directionalLightHelper = new THREE.DirectionalLightHelper(
     directionalLight,
     5
@@ -121,9 +121,19 @@ const initLight = (): void => {
 
 const loadBuildingModel = () => {
   gltfLoader.load(getAssetsFile("building/building.glb"), (gltf) => {
-    gltf.scene.scale.set(0.01, 0.01, 0.01);
-    gltf.scene.position.set(0, -8.5, -3.5);
-    console.log(gltf);
+    gltf.scene.scale.set(0.05, 0.05, 0.05);
+
+    gltf.scene.position.set(14, -40.8, 0);
+
+    const currentRotation = gltf.scene.rotation.clone();
+    const newRotation = new THREE.Euler(
+      currentRotation.x,
+      currentRotation.y - (131 * Math.PI) / 180,
+      currentRotation.z,
+      currentRotation.order
+    );
+    gltf.scene.rotation.copy(newRotation);
+
     scene.add(gltf.scene);
   });
 };
@@ -136,13 +146,13 @@ const initControls = (): void => {
   // 使动画循环使用时阻尼或自转 意思是否有惯性
   controls.enableDamping = true;
   //是否可以缩放
-  controls.enableZoom = false;
+  controls.enableZoom = true;
   //是否自动旋转
   controls.autoRotate = false;
   //是否开启右键拖拽
-  controls.enablePan = false;
+  controls.enablePan = true;
   //摄像机缩放的速度
-  controls.zoomSpeed = 1.8;
+  controls.zoomSpeed = 1;
 
   // controls.maxPolarAngle = Math.PI / 2 - 0.01
 };
@@ -162,36 +172,37 @@ const render = (): void => {
 };
 
 const onDocumentMouseMove = (event: any) => {
-  if (isMouseMove.value) {
-    mouse.x = event.clientX / canvas.value.clientWidth - 0.5;
-    mouse.y = event.clientY / canvas.value.clientHeight - 0.5;
+  // if (isMouseMove.value) {
+  //   mouse.x = event.clientX / canvas.value.clientWidth - 0.5;
+  //   mouse.y = event.clientY / canvas.value.clientHeight - 0.5;
 
-    const mouseYPos = Math.min(Math.max(mouse.y + -2.5, -2.7), -2.3);
-    const mouseXPos = Math.min(Math.max(mouse.x + -8, -8.5), -7.5);
+  //   const mouseYPos = Math.min(Math.max(mouse.y + -2.5, -2.7), -2.3);
+  //   const mouseXPos = Math.min(Math.max(mouse.x + -8, -8.5), -7.5);
 
-    gsap.to(camera.position, {
-      y: mouseYPos,
-      z: mouseXPos,
-      ease: "Power2.inOut",
-      duration: 2,
-    });
-  }
+  //   gsap.to(camera.position, {
+  //     y: mouseYPos,
+  //     z: mouseXPos,
+  //     ease: "Power2.inOut",
+  //     duration: 2,
+  //   });
+  // }
+  console.log("scene", scene)
 };
 
-document.addEventListener("mousemove", onDocumentMouseMove, false);
+// document.addEventListener("mousemove", onDocumentMouseMove, false);
 
-document.addEventListener(
-  "mouseleave",
-  () => {
-    gsap.to(camera.position, {
-      y: -2.5,
-      z: -8,
-      ease: "Power2.inOut",
-      duration: 2,
-    });
-  },
-  false
-);
+// document.addEventListener(
+//   "mouseleave",
+//   () => {
+//     gsap.to(camera.position, {
+//       y: -2.5,
+//       z: -8,
+//       ease: "Power2.inOut",
+//       duration: 2,
+//     });
+//   },
+//   false
+// );
 
 window.addEventListener("resize", () => {
   // 更新摄像机
@@ -210,7 +221,7 @@ window.addEventListener("resize", () => {
   position: fixed;
   top: 0;
   left: 0;
-  z-index: -1
+  z-index: -1;
 }
 
 .website-view {
@@ -248,7 +259,6 @@ window.addEventListener("resize", () => {
     }
   }
 }
-
 
 .left-enter-active {
   animation: left 1s linear 0s;
