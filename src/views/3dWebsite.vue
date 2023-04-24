@@ -1,6 +1,6 @@
 <template>
   <div id="canvas" ref="canvas"></div>
-  <!-- <div class="website-view">
+  <div class="website-view">
     <div class="view-page">
       <transition name="left">
         <div class="title" v-if="showTitle">𝟥𝒟 𝒲𝑒𝒷𝒮𝒾𝓉𝑒<br /> 𝒹𝑒𝓂𝑜</div>
@@ -10,7 +10,7 @@
       </transition>
     </div>
     <div class="view-page"></div>
-  </div> -->
+  </div>
 </template>
 
 <script lang="ts" setup>
@@ -26,6 +26,7 @@ import gsap from "gsap";
 const canvas = ref<any>(null); // 画布
 let scene: THREE.Scene; // 场景
 let camera: THREE.PerspectiveCamera; // 相机
+let cameraPostion: THREE.Vector3; // 相机位置
 let renderer: THREE.WebGLRenderer; // 渲染器
 let controls: any; // 控制器
 let stats: any;
@@ -34,6 +35,7 @@ let mouse: THREE.Vector2 = new THREE.Vector2(); // 鼠标二位坐标
 const manager = new THREE.LoadingManager(); // 加载器管理器
 
 const textureLoader: THREE.TextureLoader = new THREE.TextureLoader(manager); // 纹理加载器
+let skyEnvMap: THREE.CubeTexture;
 
 const dracoLoader: DRACOLoader = new DRACOLoader();
 dracoLoader.setDecoderPath("draco/");
@@ -66,22 +68,23 @@ const initScene = (): void => {
   scene = new THREE.Scene();
 
   const skyBg = [
-    getAssetsFile("sky/posx.jpg"),
-    getAssetsFile("sky/negx.jpg"),
-    getAssetsFile("sky/posy.jpg"),
-    getAssetsFile("sky/negy.jpg"),
-    getAssetsFile("sky/posz.jpg"),
-    getAssetsFile("sky/negz.jpg"),
+    getAssetsFile("sky/px.jpg"),
+    getAssetsFile("sky/nx.jpg"),
+    getAssetsFile("sky/py.jpg"),
+    getAssetsFile("sky/ny.jpg"),
+    getAssetsFile("sky/pz.jpg"),
+    getAssetsFile("sky/nz.jpg"),
   ];
   const cubeLoader: THREE.CubeTextureLoader = new THREE.CubeTextureLoader();
-  scene.background = cubeLoader.load(skyBg);
+  skyEnvMap = cubeLoader.load(skyBg);
+  scene.background = skyEnvMap;
 };
 
 const initCamera = (width: number, height: number): void => {
   camera = new THREE.PerspectiveCamera(45, width / height, 1, 1000);
 
-  const newPosition = new THREE.Vector3(0, -13, 48);
-  camera.position.copy(newPosition);
+  cameraPostion = new THREE.Vector3(0, -13, 48);
+  camera.position.copy(cameraPostion);
 
   scene.add(camera);
 };
@@ -108,7 +111,7 @@ const initLight = (): void => {
 
   const directionalLight: THREE.DirectionalLight = new THREE.DirectionalLight(
     new THREE.Color("rgb(255, 99, 71)"),
-    1
+    2
   );
   directionalLight.position.set(-220, 30, 50);
   const directionalLightHelper = new THREE.DirectionalLightHelper(
@@ -133,6 +136,18 @@ const loadBuildingModel = () => {
       currentRotation.order
     );
     gltf.scene.rotation.copy(newRotation);
+
+    const ObjectGroup = gltf.scene.children
+    for(let i = 0; i < ObjectGroup.length; i++) {
+      if(ObjectGroup[i] instanceof THREE.Group && ObjectGroup[i].name === 'AB1_OBJ_02') {
+        ObjectGroup[i].children && ObjectGroup[i].children.forEach(item => {
+          if(item instanceof THREE.Mesh && item.name === 'AB1_OBJ_02_1') {
+            item.material.envMap = skyEnvMap
+            item.material.envMapIntensity = 0.5
+          }
+        })
+      }
+    }
 
     scene.add(gltf.scene);
   });
@@ -172,37 +187,34 @@ const render = (): void => {
 };
 
 const onDocumentMouseMove = (event: any) => {
-  // if (isMouseMove.value) {
-  //   mouse.x = event.clientX / canvas.value.clientWidth - 0.5;
-  //   mouse.y = event.clientY / canvas.value.clientHeight - 0.5;
+  if (isMouseMove.value) {
+    mouse.x = event.clientX / canvas.value.clientWidth + 0.5;
+    mouse.y = event.clientY / canvas.value.clientHeight + 0.5;
 
-  //   const mouseYPos = Math.min(Math.max(mouse.y + -2.5, -2.7), -2.3);
-  //   const mouseXPos = Math.min(Math.max(mouse.x + -8, -8.5), -7.5);
-
-  //   gsap.to(camera.position, {
-  //     y: mouseYPos,
-  //     z: mouseXPos,
-  //     ease: "Power2.inOut",
-  //     duration: 2,
-  //   });
-  // }
-  console.log("scene", scene)
+    gsap.to(camera.position, {
+      x: cameraPostion.x + mouse.x,
+      y: cameraPostion.y - mouse.y,
+      ease: "Power2.inOut",
+      duration: 2,
+    });
+  }
 };
 
-// document.addEventListener("mousemove", onDocumentMouseMove, false);
+document.addEventListener("mousemove", onDocumentMouseMove, false);
 
-// document.addEventListener(
-//   "mouseleave",
-//   () => {
-//     gsap.to(camera.position, {
-//       y: -2.5,
-//       z: -8,
-//       ease: "Power2.inOut",
-//       duration: 2,
-//     });
-//   },
-//   false
-// );
+document.addEventListener(
+  "mouseleave",
+  () => {
+    gsap.to(camera.position, {
+      x: cameraPostion.x,
+      y: cameraPostion.y,
+      z: cameraPostion.z,
+      ease: "Power2.inOut",
+      duration: 2,
+    });
+  },
+  false
+);
 
 window.addEventListener("resize", () => {
   // 更新摄像机
