@@ -34,6 +34,11 @@ let isMouseMove = ref<Boolean>(true); // 状态 控制鼠标移动画面是否�
 let mouse: THREE.Vector2 = new THREE.Vector2(); // 鼠标二位坐标
 const manager = new THREE.LoadingManager(); // 加载器管理器
 
+let buildingModel: THREE.Group; // 建筑模型
+
+const preScrollPos = ref<Number>(window.scrollY)
+const scrollDirection = ref<Boolean>(false)
+
 const textureLoader: THREE.TextureLoader = new THREE.TextureLoader(manager); // 纹理加载器
 let skyEnvMap: THREE.CubeTexture;
 
@@ -149,7 +154,9 @@ const loadBuildingModel = () => {
       }
     }
 
-    scene.add(gltf.scene);
+    buildingModel = gltf.scene
+
+    scene.add(buildingModel);
   });
 };
 
@@ -157,7 +164,7 @@ const initControls = (): void => {
   controls = new OrbitControls(camera, renderer.domElement);
 
   // 控制器是否相应
-  controls.enabled = false;
+  controls.enabled = true;
   // 使动画循环使用时阻尼或自转 意思是否有惯性
   controls.enableDamping = true;
   //是否可以缩放
@@ -217,8 +224,17 @@ window.addEventListener(
 );
 
 window.addEventListener("scroll", (event: any) => {
-  const scrollTop = event.target.scrollingElement.scrollTop
-  console.log("scrollTop", scrollTop)
+  const currentScrollPos = window.scrollY;
+  if (currentScrollPos > preScrollPos.value) {
+    scrollDirection.value = false
+
+    if(buildingModel) buildingModel.rotation.y -= currentScrollPos / 2 * 0.001
+  } else {
+    scrollDirection.value = true
+
+    if(buildingModel) buildingModel.rotation.y += currentScrollPos / 2 * 0.001
+  }
+  preScrollPos.value = currentScrollPos;
 })
 
 window.addEventListener("resize", () => {
