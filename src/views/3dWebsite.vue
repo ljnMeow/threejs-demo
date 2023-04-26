@@ -200,9 +200,9 @@ const onDocumentMouseMove = (event: any) => {
   }
 };
 
-document.addEventListener("mousemove", onDocumentMouseMove, false);
+window.addEventListener("mousemove", onDocumentMouseMove, false);
 
-document.addEventListener(
+window.addEventListener(
   "mouseleave",
   () => {
     gsap.to(camera.position, {
@@ -215,6 +215,11 @@ document.addEventListener(
   },
   false
 );
+
+window.addEventListener("scroll", (event: any) => {
+  const scrollTop = event.target.scrollingElement.scrollTop
+  console.log("scrollTop", scrollTop)
+})
 
 window.addEventListener("resize", () => {
   // 更新摄像机
