@@ -3,7 +3,10 @@
   <div class="website-view">
     <div class="view-page">
       <transition name="left">
-        <div class="title" v-if="showTitle">𝟥𝒟 𝒲𝑒𝒷𝒮𝒾𝓉𝑒<br /> 𝒹𝑒𝓂𝑜</div>
+        <div class="title" v-if="showTitle">
+          𝟥𝒟 𝒲𝑒𝒷𝒮𝒾𝓉𝑒<br />
+          𝒹𝑒𝓂𝑜
+        </div>
       </transition>
       <transition name="top">
         <div class="start" v-if="showStart">↓</div>
@@ -20,7 +23,7 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader";
 import { nextTick, ref } from "vue";
-import { getAssetsFile } from "../utils";
+import { getAssetsFile, debounce } from "../utils";
 import gsap from "gsap";
 
 const canvas = ref<any>(null); // 画布
@@ -36,8 +39,8 @@ const manager = new THREE.LoadingManager(); // 加载器管理器
 
 let buildingModel: THREE.Group; // 建筑模型
 
-const preScrollPos = ref<Number>(window.scrollY)
-const scrollDirection = ref<Boolean>(false)
+const preScrollPos = ref<Number>(window.scrollY);
+const scrollDirection = ref<Boolean>(false);
 
 const textureLoader: THREE.TextureLoader = new THREE.TextureLoader(manager); // 纹理加载器
 let skyEnvMap: THREE.CubeTexture;
@@ -142,19 +145,23 @@ const loadBuildingModel = () => {
     );
     gltf.scene.rotation.copy(newRotation);
 
-    const ObjectGroup = gltf.scene.children
-    for(let i = 0; i < ObjectGroup.length; i++) {
-      if(ObjectGroup[i] instanceof THREE.Group && ObjectGroup[i].name === 'AB1_OBJ_02') {
-        ObjectGroup[i].children && ObjectGroup[i].children.forEach(item => {
-          if(item instanceof THREE.Mesh && item.name === 'AB1_OBJ_02_1') {
-            item.material.envMap = skyEnvMap
-            item.material.envMapIntensity = 0.5
-          }
-        })
+    const ObjectGroup = gltf.scene.children;
+    for (let i = 0; i < ObjectGroup.length; i++) {
+      if (
+        ObjectGroup[i] instanceof THREE.Group &&
+        ObjectGroup[i].name === "AB1_OBJ_02"
+      ) {
+        ObjectGroup[i].children &&
+          ObjectGroup[i].children.forEach((item) => {
+            if (item instanceof THREE.Mesh && item.name === "AB1_OBJ_02_1") {
+              item.material.envMap = skyEnvMap;
+              item.material.envMapIntensity = 0.5;
+            }
+          });
       }
     }
 
-    buildingModel = gltf.scene
+    buildingModel = gltf.scene;
 
     scene.add(buildingModel);
   });
@@ -207,7 +214,7 @@ const onDocumentMouseMove = (event: any) => {
   }
 };
 
-window.addEventListener("mousemove", onDocumentMouseMove, false);
+// window.addEventListener("mousemove", onDocumentMouseMove, false);
 
 window.addEventListener(
   "mouseleave",
@@ -224,18 +231,31 @@ window.addEventListener(
 );
 
 window.addEventListener("scroll", (event: any) => {
-  const currentScrollPos = window.scrollY;
+  const currentScrollPos: number = window.scrollY;
+  const windowHeight: number = window.innerHeight;
+  const documentHeight: number = document.documentElement.scrollHeight;
+  const scrollLength: number = documentHeight - windowHeight;
+
+  console.log(scrollLength, currentScrollPos)
+
   if (currentScrollPos > preScrollPos.value) {
-    scrollDirection.value = false
+    scrollDirection.value = false;
 
-    if(buildingModel) buildingModel.rotation.y -= currentScrollPos / 2 * 0.001
+    if (buildingModel) {
+      camera.position.x -= 0.1;
+    }
   } else {
-    scrollDirection.value = true
+    scrollDirection.value = true;
 
-    if(buildingModel) buildingModel.rotation.y += currentScrollPos / 2 * 0.001
+    if (buildingModel) {
+      camera.position.x += 0.1;
+      // if(currentScrollPos === 0) {
+      //   camera.position.x = 0
+      // }
+    }
   }
   preScrollPos.value = currentScrollPos;
-})
+});
 
 window.addEventListener("resize", () => {
   // 更新摄像机

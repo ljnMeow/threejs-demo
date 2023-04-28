@@ -1,0 +1,1 @@
+export type DebounceFunction<T extends (...args: any[]) => any> = ( func: T, delay: number ) => T & { cancel: () => void };
