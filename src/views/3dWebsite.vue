@@ -28,20 +28,25 @@ import gsap from "gsap";
 
 const canvas = ref<any>(null); // 画布
 let scene: THREE.Scene; // 场景
+
 let camera: THREE.PerspectiveCamera; // 相机
 let cameraPostion: THREE.Vector3; // 相机位置
+let originaCameraPos: THREE.Vector3; // 初始相机位置
+
 let renderer: THREE.WebGLRenderer; // 渲染器
 let controls: any; // 控制器
 let stats: any;
+
 let isMouseMove = ref<Boolean>(true); // 状态 控制鼠标移动画面是否交互
 let mouse: THREE.Vector2 = new THREE.Vector2(); // 鼠标二位坐标
-const manager = new THREE.LoadingManager(); // 加载器管理器
+let timer: any; // 定时器-处理滚动状态
 
 let buildingModel: THREE.Group; // 建筑模型
+let originalModelPos: THREE.Vector3;
 
 const preScrollPos = ref<Number>(window.scrollY);
-const scrollDirection = ref<Boolean>(false);
 
+const manager = new THREE.LoadingManager(); // 加载器管理器
 const textureLoader: THREE.TextureLoader = new THREE.TextureLoader(manager); // 纹理加载器
 let skyEnvMap: THREE.CubeTexture;
 
@@ -92,6 +97,7 @@ const initCamera = (width: number, height: number): void => {
   camera = new THREE.PerspectiveCamera(45, width / height, 1, 1000);
 
   cameraPostion = new THREE.Vector3(0, -13, 48);
+  originaCameraPos = cameraPostion.clone();
   camera.position.copy(cameraPostion);
 
   scene.add(camera);
@@ -134,7 +140,9 @@ const loadBuildingModel = () => {
   gltfLoader.load(getAssetsFile("building/building.glb"), (gltf) => {
     gltf.scene.scale.set(0.05, 0.05, 0.05);
 
-    gltf.scene.position.set(14, -40.8, 0);
+    originalModelPos = new THREE.Vector3(14, -40.8, 0);
+
+    gltf.scene.position.copy(originalModelPos);
 
     const currentRotation = gltf.scene.rotation.clone();
     const newRotation = new THREE.Euler(
@@ -205,57 +213,79 @@ const onDocumentMouseMove = (event: any) => {
     mouse.x = event.clientX / canvas.value.clientWidth + 0.5;
     mouse.y = event.clientY / canvas.value.clientHeight + 0.5;
 
+    console.log('111', originaCameraPos)
+
     gsap.to(camera.position, {
-      x: cameraPostion.x + mouse.x,
-      y: cameraPostion.y - mouse.y,
+      x: originaCameraPos.x + mouse.x,
+      y: originaCameraPos.y - mouse.y,
       ease: "Power2.inOut",
       duration: 2,
     });
   }
 };
 
-// window.addEventListener("mousemove", onDocumentMouseMove, false);
+window.addEventListener("mousemove", onDocumentMouseMove, false);
+
+// window.addEventListener(
+//   "mouseleave",
+//   () => {
+//     gsap.to(camera.position, {
+//       x: originaCameraPos.x,
+//       y: originaCameraPos.y,
+//       z: originaCameraPos.z,
+//       ease: "Power2.inOut",
+//       duration: 2,
+//     });
+//   },
+//   false
+// );
 
 window.addEventListener(
-  "mouseleave",
-  () => {
+  "scroll",
+  (event: any) => {
+    isMouseMove.value = false;
+
+    const currentScrollPos: number = window.scrollY;
+    const windowHeight: number = window.innerHeight;
+    const documentHeight: number = document.documentElement.scrollHeight;
+    const scrollLength: number = documentHeight - windowHeight;
+    const offset = currentScrollPos / scrollLength;
+
+    let newModelPos: THREE.Vector3 = originalModelPos
+      .clone()
+      .add(new THREE.Vector3(offset * 8, offset * 12, offset * 8));
+
+    if (currentScrollPos === 0) {
+      newModelPos.copy(originalModelPos);
+    }
+
     gsap.to(camera.position, {
-      x: cameraPostion.x,
-      y: cameraPostion.y,
-      z: cameraPostion.z,
+      x: offset * 18,
+      y: cameraPostion.y + offset * 10,
       ease: "Power2.inOut",
-      duration: 2,
+      duration: 0.5,
     });
+
+    console.log('==', camera.position, originaCameraPos)
+    originaCameraPos = camera.position.clone()
+
+    gsap.to(buildingModel.position, {
+      x: newModelPos.x,
+      y: newModelPos.y,
+      z: newModelPos.z,
+      ease: "Power2.inOut",
+      duration: 0.5,
+    });
+
+    preScrollPos.value = currentScrollPos;
+
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(() => {
+      isMouseMove.value = true;
+    }, 1000);
   },
-  false
+  { passive: true }
 );
-
-window.addEventListener("scroll", (event: any) => {
-  const currentScrollPos: number = window.scrollY;
-  const windowHeight: number = window.innerHeight;
-  const documentHeight: number = document.documentElement.scrollHeight;
-  const scrollLength: number = documentHeight - windowHeight;
-
-  console.log(scrollLength, currentScrollPos)
-
-  if (currentScrollPos > preScrollPos.value) {
-    scrollDirection.value = false;
-
-    if (buildingModel) {
-      camera.position.x -= 0.1;
-    }
-  } else {
-    scrollDirection.value = true;
-
-    if (buildingModel) {
-      camera.position.x += 0.1;
-      // if(currentScrollPos === 0) {
-      //   camera.position.x = 0
-      // }
-    }
-  }
-  preScrollPos.value = currentScrollPos;
-});
 
 window.addEventListener("resize", () => {
   // 更新摄像机
