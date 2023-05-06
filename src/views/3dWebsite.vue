@@ -1,6 +1,6 @@
 <template>
   <div id="canvas" ref="canvas"></div>
-  <div class="website-view">
+  <div class="website-view" @mousewheel="DOMMouseScroll">
     <div class="view-page">
       <transition name="left">
         <div class="title" v-if="showTitle">
@@ -16,7 +16,8 @@
       <transition>
         <div class="text">
           𝑨 𝑻𝒉𝒓𝒆𝒆𝒋𝒔 3𝑫 𝑾𝒆𝒃𝑺𝒊𝒕𝒆 𝑫𝒆𝒎𝒐, 𝑨 𝑻𝒉𝒓𝒆𝒆𝒋𝒔 3𝑫 𝑾𝒆𝒃𝑺𝒊𝒕𝒆 𝑫𝒆𝒎𝒐, 𝑨 𝑻𝒉𝒓𝒆𝒆𝒋𝒔 3𝑫
-          𝑾𝒆𝒃𝑺𝒊𝒕𝒆 𝑫𝒆𝒎𝒐, 𝑨 𝑻𝒉𝒓𝒆𝒆𝒋𝒔 3𝑫 𝑾𝒆𝒃𝑺𝒊𝒕𝒆 𝑫𝒆𝒎𝒐
+          𝑾𝒆𝒃𝑺𝒊𝒕𝒆 𝑫𝒆𝒎𝒐, 𝑨 𝑻𝒉𝒓𝒆𝒆𝒋𝒔 3𝑫 𝑾𝒆𝒃𝑺𝒊𝒕𝒆 𝑫𝒆𝒎𝒐, 𝑨 𝑻𝒉𝒓𝒆𝒆𝒋𝒔 3𝑫 𝑾𝒆𝒃𝑺𝒊𝒕𝒆 𝑫𝒆𝒎𝒐,
+          𝑨 𝑻𝒉𝒓𝒆𝒆𝒋𝒔 3𝑫 𝑾𝒆𝒃𝑺𝒊𝒕𝒆 𝑫𝒆𝒎𝒐, 𝑨 𝑻𝒉𝒓𝒆𝒆𝒋𝒔 3𝑫 𝑾𝒆𝒃𝑺𝒊𝒕𝒆 𝑫𝒆𝒎𝒐, 𝑨 𝑻𝒉𝒓𝒆𝒆𝒋𝒔 3𝑫 𝑾𝒆𝒃𝑺𝒊𝒕𝒆 𝑫𝒆𝒎𝒐
         </div>
       </transition>
     </div>
@@ -32,7 +33,7 @@ import Stats from "stats.js";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader";
-import { nextTick, ref } from "vue";
+import { nextTick, ref, reactive } from "vue";
 import { getAssetsFile } from "../utils";
 import gsap from "gsap";
 
@@ -64,6 +65,17 @@ dracoLoader.preload();
 
 const gltfLoader: GLTFLoader = new GLTFLoader(manager);
 gltfLoader.setDRACOLoader(dracoLoader);
+
+type PageScrollType = {
+  current: number;
+  isScrolling: boolean;
+  deltaY: number;
+}
+const pageScroll: PageScrollType = reactive({
+  current: 1,
+  isScrolling: false,
+  deltaY: 0
+})
 
 const showTitle = ref<Boolean>(false);
 const showStart = ref<Boolean>(false);
@@ -225,6 +237,20 @@ const goNextPage = (): void => {
   });
 };
 
+const DOMMouseScroll = (): void => {
+  const documentHeight: number = document.documentElement.scrollHeight;
+  const scrollTop: number = window.scrollY;
+  const screenHeight: number = documentHeight / 5
+
+  // 计算当前屏幕的索引
+  const currentScreenIndex = Math.floor(scrollTop / screenHeight)
+  // 每次滚动一个屏幕高度
+  window.scrollTo({
+    top: currentScreenIndex * screenHeight,
+    behavior: 'smooth'
+  })
+}
+
 const handleWindowScroll = (): void => {
   isMouseMove.value = false;
 
@@ -238,26 +264,18 @@ const handleWindowScroll = (): void => {
     originalModelPos.value &&
     originalModelPos.value
       .clone()
-      .add(new THREE.Vector3(offset * 8, offset * 12, offset * 8));
+      .add(new THREE.Vector3(offset * 10, offset * 8, offset * 13));
 
   if (currentScrollPos === 0) {
     newModelPos.copy(originalModelPos.value);
   }
   if (scrollLength / 4 > currentScrollPos) {
-    gsap.to(camera.position, {
-      x: offset * 18,
-      y: cameraPostion.y + offset * 10,
-      ease: "Power2.inOut",
-      duration: 0.5,
-    });
+    camera.position.x = offset * 18
+    camera.position.y = cameraPostion.y + offset * 14
 
-    gsap.to(buildingModel.position, {
-      x: newModelPos.x,
-      y: newModelPos.y,
-      z: newModelPos.z,
-      ease: "Power2.inOut",
-      duration: 0.5,
-    });
+    buildingModel.position.x = newModelPos.x
+    buildingModel.position.y = newModelPos.y
+    buildingModel.position.z = newModelPos.z
   }
 
   preScrollPos.value = currentScrollPos;
@@ -330,18 +348,22 @@ window.addEventListener("resize", () => {
       top: 50%;
       transform: translateY(-50%);
       width: 40%;
+      line-height: 40px;
       font-family: "Archivo";
       font-weight: 100;
-      font-size: 20px;
+      font-size: 26px;
       color: #304150;
     }
   }
 }
 
 .left-enter-active {
-  animation: left 1s linear 0s;
+  animation: leftEnter 1s linear 0s;
 }
-@keyframes left {
+.left-leave-active {
+  animation: leftLeave 1s linear 0s;
+}
+@keyframes leftEnter {
   0% {
     opacity: 0;
     transform: translate(-100px, -50%);
@@ -351,11 +373,24 @@ window.addEventListener("resize", () => {
     transform: translate(0, -50%);
   }
 }
+@keyframes leftLeave {
+  0% {
+    opacity: 1;
+    transform: translate(0, -50%);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-100px, -50%);
+  }
+}
 
 .top-enter-active {
-  animation: top 1s linear 0s;
+  animation: topEnter 1s linear 0s;
 }
-@keyframes top {
+.top-leave-active {
+  animation: topLeave 1s linear 0s;
+}
+@keyframes topEnter {
   0% {
     opacity: 0;
     top: 100%;
@@ -363,6 +398,16 @@ window.addEventListener("resize", () => {
   100% {
     opacity: 1;
     top: 70%;
+  }
+}
+@keyframes topLeave {
+  0% {
+    opacity: 1;
+    top: 70%;
+  }
+  100% {
+    opacity: 0;
+    top: 100%;
   }
 }
 </style>
