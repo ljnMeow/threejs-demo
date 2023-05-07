@@ -1,6 +1,6 @@
 <template>
   <div id="canvas" ref="canvas"></div>
-  <div class="website-view" @mousewheel="DOMMouseScroll">
+  <div class="website-view">
     <div class="view-page">
       <transition name="left">
         <div class="title" v-if="showTitle">
@@ -16,8 +16,9 @@
       <transition>
         <div class="text">
           𝑨 𝑻𝒉𝒓𝒆𝒆𝒋𝒔 3𝑫 𝑾𝒆𝒃𝑺𝒊𝒕𝒆 𝑫𝒆𝒎𝒐, 𝑨 𝑻𝒉𝒓𝒆𝒆𝒋𝒔 3𝑫 𝑾𝒆𝒃𝑺𝒊𝒕𝒆 𝑫𝒆𝒎𝒐, 𝑨 𝑻𝒉𝒓𝒆𝒆𝒋𝒔 3𝑫
-          𝑾𝒆𝒃𝑺𝒊𝒕𝒆 𝑫𝒆𝒎𝒐, 𝑨 𝑻𝒉𝒓𝒆𝒆𝒋𝒔 3𝑫 𝑾𝒆𝒃𝑺𝒊𝒕𝒆 𝑫𝒆𝒎𝒐, 𝑨 𝑻𝒉𝒓𝒆𝒆𝒋𝒔 3𝑫 𝑾𝒆𝒃𝑺𝒊𝒕𝒆 𝑫𝒆𝒎𝒐,
-          𝑨 𝑻𝒉𝒓𝒆𝒆𝒋𝒔 3𝑫 𝑾𝒆𝒃𝑺𝒊𝒕𝒆 𝑫𝒆𝒎𝒐, 𝑨 𝑻𝒉𝒓𝒆𝒆𝒋𝒔 3𝑫 𝑾𝒆𝒃𝑺𝒊𝒕𝒆 𝑫𝒆𝒎𝒐, 𝑨 𝑻𝒉𝒓𝒆𝒆𝒋𝒔 3𝑫 𝑾𝒆𝒃𝑺𝒊𝒕𝒆 𝑫𝒆𝒎𝒐
+          𝑾𝒆𝒃𝑺𝒊𝒕𝒆 𝑫𝒆𝒎𝒐, 𝑨 𝑻𝒉𝒓𝒆𝒆𝒋𝒔 3𝑫 𝑾𝒆𝒃𝑺𝒊𝒕𝒆 𝑫𝒆𝒎𝒐, 𝑨 𝑻𝒉𝒓𝒆𝒆𝒋𝒔 3𝑫 𝑾𝒆𝒃𝑺𝒊𝒕𝒆 𝑫𝒆𝒎𝒐, 𝑨
+          𝒉𝒓𝒆𝒆𝒋𝒔 3𝑫 𝑾𝒆𝒃𝑺𝒊𝒕𝒆 𝑫𝒆𝒎𝒐, 𝑨 𝑻𝒉𝒓𝒆𝒆𝒋𝒔 3𝑫 𝑾𝒆𝒃𝑺𝒊𝒕𝒆 𝑫𝒆𝒎𝒐, 𝑨 𝑻𝒉𝒓𝒆𝒆𝒋𝒔 3𝑫
+          𝑾𝒆𝒃𝑺𝒊𝒕𝒆 𝑫𝒆𝒎𝒐
         </div>
       </transition>
     </div>
@@ -53,7 +54,14 @@ let timer: any; // 定时器-处理滚动状态
 let buildingModel: THREE.Group; // 建筑模型
 let originalModelPos = ref<THREE.Vector3>(new THREE.Vector3(0, 0, 0));
 
-const preScrollPos = ref<Number>(window.scrollY);
+type PageScrollType = {
+  preScrollPos: number;
+  isScrolling: boolean;
+};
+const pageScrollParams: PageScrollType = reactive({
+  preScrollPos: window.scrollY,
+  isScrolling: false,
+});
 
 const manager = new THREE.LoadingManager(); // 加载器管理器
 const textureLoader: THREE.TextureLoader = new THREE.TextureLoader(manager); // 纹理加载器
@@ -66,22 +74,10 @@ dracoLoader.preload();
 const gltfLoader: GLTFLoader = new GLTFLoader(manager);
 gltfLoader.setDRACOLoader(dracoLoader);
 
-type PageScrollType = {
-  current: number;
-  isScrolling: boolean;
-  deltaY: number;
-}
-const pageScroll: PageScrollType = reactive({
-  current: 1,
-  isScrolling: false,
-  deltaY: 0
-})
-
 const showTitle = ref<Boolean>(false);
 const showStart = ref<Boolean>(false);
 
 nextTick(() => {
-
   initScene();
   initCamera(canvas.value.clientWidth, canvas.value.clientHeight);
   initRenderer(canvas.value.clientWidth, canvas.value.clientHeight);
@@ -237,19 +233,25 @@ const goNextPage = (): void => {
   });
 };
 
-const DOMMouseScroll = (): void => {
+const pageScroll = (direction: Boolean): void => {
+  // 文档可滚动高度
   const documentHeight: number = document.documentElement.scrollHeight;
+  // 滚动位置
   const scrollTop: number = window.scrollY;
-  const screenHeight: number = documentHeight / 5
-
+  // 每页高度
+  const screenHeight: number = documentHeight / 5;
   // 计算当前屏幕的索引
-  const currentScreenIndex = Math.floor(scrollTop / screenHeight)
+  const currentScreenIndex = Math.floor(scrollTop / screenHeight);
+  // 更改滚动状态
+  pageScrollParams.isScrolling = true;
   // 每次滚动一个屏幕高度
   window.scrollTo({
-    top: currentScreenIndex * screenHeight,
-    behavior: 'smooth'
-  })
-}
+    top:
+      (direction ? currentScreenIndex + 1 : currentScreenIndex) *
+      screenHeight,
+    behavior: "smooth",
+  });
+};
 
 const handleWindowScroll = (): void => {
   isMouseMove.value = false;
@@ -270,23 +272,34 @@ const handleWindowScroll = (): void => {
     newModelPos.copy(originalModelPos.value);
   }
   if (scrollLength / 4 > currentScrollPos) {
-    camera.position.x = offset * 18
-    camera.position.y = cameraPostion.y + offset * 14
+    camera.position.x = offset * 18;
+    camera.position.y = cameraPostion.y + offset * 14;
 
-    buildingModel.position.x = newModelPos.x
-    buildingModel.position.y = newModelPos.y
-    buildingModel.position.z = newModelPos.z
+    buildingModel.position.x = newModelPos.x;
+    buildingModel.position.y = newModelPos.y;
+    buildingModel.position.z = newModelPos.z;
+  }
+  if (!pageScrollParams.isScrolling) {
+    if (pageScrollParams.preScrollPos > currentScrollPos) {
+      pageScroll(false);
+    } else {
+      pageScroll(true);
+    }
   }
 
-  preScrollPos.value = currentScrollPos;
+  pageScrollParams.preScrollPos = currentScrollPos;
 
   if (timer) clearTimeout(timer);
   timer = setTimeout(() => {
     isMouseMove.value = true;
-  }, 2000);
+    pageScrollParams.isScrolling = false;
+    console.log(111)
+  }, 1000);
 };
 
-window.addEventListener("scroll", () => handleWindowScroll(), { passive: true });
+window.addEventListener("scroll", () => handleWindowScroll(), {
+  passive: true,
+});
 
 window.addEventListener("resize", () => {
   // 更新摄像机
