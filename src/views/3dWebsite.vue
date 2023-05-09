@@ -34,8 +34,45 @@
         </div>
       </transition>
     </div>
-    <div class="view-page" style="color: red">3dsadwads</div>
-    <div class="view-page" style="color: red">7894615160</div>
+    <div class="view-page">
+      <transition name="left-image-fade">
+        <img
+          v-if="elementStatus.pageThreeLeftImage"
+          class="left-image"
+          src="https://realestate-neotix.vercel.app/assets/images/d620805693b8c555.jpg"
+          alt="image"
+        />
+      </transition>
+      <transition name="header-image-fade">
+        <div class="header-pic" v-if="elementStatus.pageThreeHeader">
+          <img
+            src="https://p3-passport.byteimg.com/img/user-avatar/e883ad00f4c080eae18ebdb3c35aa9d8~180x180.awebp"
+            alt="header-pic"
+          />
+          <p>Caliis Lin</p>
+        </div>
+      </transition>
+      <transition name="right-text-fade">
+        <div class="right-text" v-if="elementStatus.pageThreeRightText">
+          𝑨 𝒕𝒉𝒓𝒆𝒆 𝒋𝒔 𝒅𝒆𝒎𝒐𝒏𝒔𝒕𝒓𝒂𝒕𝒊𝒐𝒏 𝒑𝒓𝒐𝒋𝒆𝒄𝒕 𝒃𝒂𝒔𝒆𝒅 𝒐𝒏 𝑽𝒖𝒆 + 𝑻𝒚𝒑𝒆𝒔𝒄𝒓𝒊𝒑𝒕 + 𝑽𝒊𝒕𝒆, 𝑨
+          𝒕𝒉𝒓𝒆𝒆 𝒋𝒔 𝒅𝒆𝒎𝒐𝒏𝒔𝒕𝒓𝒂𝒕𝒊𝒐𝒏 𝒑𝒓𝒐𝒋𝒆𝒄𝒕 𝒃𝒂𝒔𝒆𝒅 𝒐𝒏 𝑽𝒖𝒆 + 𝑻𝒚𝒑𝒆𝒔𝒄𝒓𝒊𝒑𝒕 + 𝑽𝒊𝒕𝒆 𝑨
+          𝒕𝒉𝒓𝒆𝒆 𝒋𝒔 𝒅𝒆𝒎𝒐𝒏𝒔𝒕𝒓𝒂𝒕𝒊𝒐𝒏 𝒑𝒓𝒐𝒋𝒆𝒄𝒕 𝒃𝒂𝒔𝒆𝒅 𝒐𝒏 𝑽𝒖𝒆 + 𝑻𝒚𝒑𝒆𝒔𝒄𝒓𝒊𝒑𝒕 + 𝑽𝒊𝒕𝒆, 𝑨
+          𝒕𝒉𝒓𝒆𝒆 𝒋𝒔 𝒅𝒆𝒎𝒐𝒏𝒔𝒕𝒓𝒂𝒕𝒊𝒐𝒏 𝒑𝒓𝒐𝒋𝒆𝒄𝒕 𝒃𝒂𝒔𝒆𝒅 𝒐𝒏 𝑽𝒖𝒆 + 𝑻𝒚𝒑𝒆𝒔𝒄𝒓𝒊𝒑𝒕 + 𝑽𝒊𝒕𝒆, 𝑨
+          𝒕𝒉𝒓𝒆𝒆 𝒋𝒔 𝒅𝒆𝒎𝒐𝒏𝒔𝒕𝒓𝒂𝒕𝒊𝒐𝒏 𝒑𝒓𝒐𝒋𝒆𝒄𝒕 𝒃𝒂𝒔𝒆𝒅 𝒐𝒏 𝑽𝒖𝒆 + 𝑻𝒚𝒑𝒆𝒔𝒄𝒓𝒊𝒑𝒕 + 𝑽𝒊𝒕𝒆, 𝑨
+          𝒕𝒉𝒓𝒆𝒆 𝒋𝒔 𝒅𝒆𝒎𝒐𝒏𝒔𝒕𝒓𝒂𝒕𝒊𝒐𝒏 𝒑𝒓𝒐𝒋𝒆𝒄𝒕 𝒃𝒂𝒔𝒆𝒅 𝒐𝒏 𝑽𝒖𝒆 + 𝑻𝒚𝒑𝒆𝒔𝒄𝒓𝒊𝒑𝒕 + 𝑽𝒊𝒕𝒆 𝑨
+          𝒕𝒉𝒓𝒆𝒆 𝒋𝒔 𝒅𝒆𝒎𝒐𝒏𝒔𝒕𝒓𝒂𝒕𝒊𝒐𝒏 𝒑𝒓𝒐𝒋𝒆𝒄𝒕 𝒃𝒂𝒔𝒆𝒅 𝒐𝒏 𝑽𝒖𝒆 + 𝑻𝒚𝒑𝒆𝒔𝒄𝒓𝒊𝒑𝒕 + 𝑽𝒊𝒕𝒆, 𝑨
+          𝒕𝒉𝒓𝒆𝒆 𝒋𝒔 𝒅𝒆𝒎𝒐𝒏𝒔𝒕𝒓𝒂𝒕𝒊𝒐𝒏 𝒑𝒓𝒐𝒋𝒆𝒄𝒕 𝒃𝒂𝒔𝒆𝒅 𝒐𝒏 𝑽𝒖𝒆 + 𝑻𝒚𝒑𝒆𝒔𝒄𝒓𝒊𝒑𝒕 + 𝑽𝒊𝒕𝒆, 𝑨
+          𝒕𝒉𝒓𝒆𝒆 𝒋𝒔 𝒅𝒆𝒎𝒐𝒏𝒔𝒕𝒓𝒂𝒕𝒊𝒐𝒏 𝒑𝒓𝒐𝒋𝒆𝒄𝒕 𝒃𝒂𝒔𝒆𝒅 𝒐𝒏 𝑽𝒖𝒆 + 𝑻𝒚𝒑𝒆𝒔𝒄𝒓𝒊𝒑𝒕 + 𝑽𝒊𝒕𝒆 𝑨
+          𝒕𝒉𝒓𝒆𝒆 𝒋𝒔 𝒅𝒆𝒎𝒐𝒏𝒔𝒕𝒓𝒂𝒕𝒊𝒐𝒏 𝒑𝒓𝒐𝒋𝒆𝒄𝒕 𝒃𝒂𝒔𝒆𝒅 𝒐𝒏 𝑽𝒖𝒆 + 𝑻𝒚𝒑𝒆𝒔𝒄𝒓𝒊𝒑𝒕 + 𝑽𝒊𝒕𝒆, 𝑨
+          𝒕𝒉𝒓𝒆𝒆 𝒋𝒔 𝒅𝒆𝒎𝒐𝒏𝒔𝒕𝒓𝒂𝒕𝒊𝒐𝒏 𝒑𝒓𝒐𝒋𝒆𝒄𝒕 𝒃𝒂𝒔𝒆𝒅 𝒐𝒏 𝑽𝒖𝒆 + 𝑻𝒚𝒑𝒆𝒔𝒄𝒓𝒊𝒑𝒕 + 𝑽𝒊𝒕𝒆
+        </div>
+      </transition>
+    </div>
+    <div class="view-page">
+      <div class="background"></div>
+      <a href="https://ljn1998codeing.love" class="my-blog">Visite my blog: https://ljn1998codeing.love</a>
+      <a href="https://juejin.cn/user/4274499823866622" class="juejin">Visite juejin: https://juejin.cn/user/4274499823866622</a>
+    </div>
     <div class="view-page" style="color: red">-=0--90wdaudosa</div>
   </div>
 </template>
@@ -88,6 +125,9 @@ const elementStatus = reactive({
   pageOnetitle: false,
   pageOneStart: false,
   pageTwoText: false,
+  pageThreeLeftImage: false,
+  pageThreeHeader: false,
+  pageThreeRightText: false,
 });
 
 nextTick(() => {
@@ -348,6 +388,15 @@ const handingElementshow = (): void => {
         elementStatus.pageOnetitle = false;
         elementStatus.pageOneStart = false;
         elementStatus.pageTwoText = true;
+        elementStatus.pageThreeLeftImage = false;
+        elementStatus.pageThreeHeader = false;
+        elementStatus.pageThreeRightText = false;
+        break;
+      case 3:
+        elementStatus.pageTwoText = false;
+        elementStatus.pageThreeLeftImage = true;
+        elementStatus.pageThreeHeader = true;
+        elementStatus.pageThreeRightText = true;
         break;
     }
   }, 1000);
@@ -372,7 +421,6 @@ window.addEventListener("resize", () => {
   left: 0;
   z-index: -1;
 }
-
 .website-view {
   width: 100vw;
   height: 100vh;
@@ -381,7 +429,6 @@ window.addEventListener("resize", () => {
     position: relative;
     width: 100vw;
     height: 100vh;
-
     .title {
       position: absolute;
       top: 50%;
@@ -393,7 +440,6 @@ window.addEventListener("resize", () => {
       color: #a5a2a2;
       user-select: none;
     }
-
     .start {
       position: absolute;
       top: 70%;
@@ -409,9 +455,8 @@ window.addEventListener("resize", () => {
       cursor: pointer;
       user-select: none;
     }
-
     .text {
-      position: relative;
+      position: absolute;
       left: 6%;
       top: 50%;
       transform: translateY(-50%);
@@ -421,6 +466,55 @@ window.addEventListener("resize", () => {
       font-weight: 100;
       font-size: 26px;
       color: #304150;
+    }
+    .left-image {
+      position: absolute;
+      left: 10%;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 36%;
+    }
+    .header-pic {
+      position: absolute;
+      left: 40%;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 14%;
+      color: #c6c0be;
+      img {
+        width: 100%;
+        background-color: rgb(215, 215, 215);
+      }
+      p {
+        text-align: center;
+        font-size: 30px;
+      }
+    }
+
+    .right-text {
+      position: absolute;
+      right: 10%;
+      width: 32%;
+      color: #f9f0ec;
+      font-size: 26px;
+    }
+    .background {
+      width: 100vw;
+      height: 100vh;
+      background-color: #2c242efa;
+      opacity: .8;
+    }
+    .my-blog {
+      position: absolute;
+      top: 30%;
+      left: 20%;
+      color: #ffffff;
+    }
+    .juejin {
+      position: absolute;
+      bottom: 30%;
+      right: 20%;
+      color: #d2a884;
     }
   }
 }
@@ -502,6 +596,108 @@ window.addEventListener("resize", () => {
   100% {
     opacity: 0;
     left: 20%;
+  }
+}
+.left-image-fade-enter-active {
+  animation: leftImageFadeEnter 1s linear 0s;
+}
+.left-image-fade-leave-active {
+  animation: leftImageFadeLeave 1s linear 0s;
+}
+@keyframes leftImageFadeEnter {
+  0% {
+    opacity: 0;
+    left: -6%;
+  }
+  50% {
+    opacity: 0.5;
+    left: 8%;
+  }
+  100% {
+    opacity: 1;
+    left: 10%;
+  }
+}
+@keyframes leftImageFadeLeave {
+  0% {
+    opacity: 1;
+    left: 10%;
+  }
+  50% {
+    opacity: 0.5;
+    left: 8%;
+  }
+  100% {
+    opacity: 0;
+    left: -6%;
+  }
+}
+.header-image-fade-enter-active {
+  animation: headerImageFadeEnter 1s linear 0s;
+}
+.header-image-fade-leave-active {
+  animation: headerImageFadeLeave 1s linear 0s;
+}
+@keyframes headerImageFadeEnter {
+  0% {
+    opacity: 0;
+    transform: scale(2) translateY(-50%);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.5) translateY(-50%);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(-50%);
+  }
+}
+@keyframes headerImageFadeLeave {
+  0% {
+    opacity: 1;
+    transform: scale(1) translateY(-50%);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.5) translateY(-50%);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(2) translateY(-50%);
+  }
+}
+.right-text-fade-enter-active {
+  animation: rightTextFadeEnter 1s linear 0s;
+}
+.right-text-fade-leave-active {
+  animation: rightTextFadeLeave 1s linear 0s;
+}
+@keyframes rightTextFadeEnter {
+  0% {
+    opacity: 0;
+    right: -10%;
+  }
+  50% {
+    opacity: 0.5;
+    right: 0%;
+  }
+  100% {
+    opacity: 1;
+    right: 10%;
+  }
+}
+@keyframes rightTextFadeLeave {
+  0% {
+    opacity: 1;
+    right: 10%;
+  }
+  50% {
+    opacity: 0.5;
+    right: 0%;
+  }
+  100% {
+    opacity: 0;
+    transform: -10%;
   }
 }
 </style>
