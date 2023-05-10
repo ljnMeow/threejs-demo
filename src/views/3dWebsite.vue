@@ -70,11 +70,36 @@
     </div>
     <div class="view-page">
       <div class="background"></div>
-      <a href="https://ljn1998codeing.love" class="my-blog">Visite my blog: https://ljn1998codeing.love</a>
-      <a href="https://juejin.cn/user/4274499823866622" class="juejin">Visite juejin: https://juejin.cn/user/4274499823866622</a>
+      <transition name="a-left-text-fade">
+        <a
+          v-if="elementStatus.pageFourALeftText"
+          href="https://ljn1998codeing.love"
+          target="_blank"
+          class="my-blog"
+          >Visite my blog: https://ljn1998codeing.love</a
+        >
+      </transition>
+      <transition name="a-right-text-fade">
+        <a
+          v-if="elementStatus.pageFourArightText"
+          href="https://juejin.cn/user/4274499823866622"
+          target="_blank"
+          class="juejin"
+          >Visite juejin: https://juejin.cn/user/4274499823866622</a
+        >
+      </transition>
     </div>
-    <div class="view-page" style="color: red">-=0--90wdaudosa</div>
+    <div class="view-page">
+      <button class="explorar" @click="explorarModel">EXPLORAR</button>
+    </div>
   </div>
+  <button
+    class="quit"
+    @click="quitExporarModel"
+    v-if="elementStatus.quitButton"
+  >
+    quit
+  </button>
 </template>
 
 <script lang="ts" setup>
@@ -86,6 +111,12 @@ import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader";
 import { nextTick, ref, reactive } from "vue";
 import { getAssetsFile } from "../utils";
 import gsap from "gsap";
+
+type PointType = {
+  x: number;
+  y: number;
+  z: number;
+};
 
 const canvas = ref<any>(null); // 画布
 const scrollview = ref<any>(null); // 滚动视图
@@ -128,6 +159,9 @@ const elementStatus = reactive({
   pageThreeLeftImage: false,
   pageThreeHeader: false,
   pageThreeRightText: false,
+  pageFourALeftText: false,
+  pageFourArightText: false,
+  quitButton: false,
 });
 
 nextTick(() => {
@@ -137,11 +171,10 @@ nextTick(() => {
   initRenderer(canvas.value.clientWidth, canvas.value.clientHeight);
   initAxesHelper();
   initControls();
-  // initStats();
+  initStats();
   render();
   initLight();
   loadBuildingModel();
-
   handingElementshow();
 });
 // 初始化滚动视图数据
@@ -255,16 +288,16 @@ const initControls = (): void => {
   controls.enabled = true;
   // 使动画循环使用时阻尼或自转 意思是否有惯性
   controls.enableDamping = true;
-  //是否可以缩放
+  // 是否可以缩放
   controls.enableZoom = true;
-  //是否自动旋转
+  // 是否自动旋转
   controls.autoRotate = false;
-  //是否开启右键拖拽
+  // 自转速度
+  controls.autoRotateSpeed = 0.5;
+  // 是否开启右键拖拽
   controls.enablePan = true;
-  //摄像机缩放的速度
+  // 摄像机缩放的速度
   controls.zoomSpeed = 1;
-
-  // controls.maxPolarAngle = Math.PI / 2 - 0.01
 };
 // 初始化状态监控
 const initStats = (): void => {
@@ -397,10 +430,125 @@ const handingElementshow = (): void => {
         elementStatus.pageThreeLeftImage = true;
         elementStatus.pageThreeHeader = true;
         elementStatus.pageThreeRightText = true;
+        elementStatus.pageFourALeftText = false;
+        elementStatus.pageFourArightText = false;
+        break;
+      case 4:
+        elementStatus.pageThreeLeftImage = false;
+        elementStatus.pageThreeHeader = false;
+        elementStatus.pageThreeRightText = false;
+        elementStatus.pageFourALeftText = true;
+        elementStatus.pageFourArightText = true;
+        break;
+      case 5:
+        elementStatus.pageFourALeftText = false;
+        elementStatus.pageFourArightText = false;
         break;
     }
   }, 1000);
 };
+// 探索模型
+const explorarModel = (): void => {
+  canvas.value.style.zIndex = 1;
+
+  const cameraGasp: gsap.core.Tween = gsap.to(camera.position, {
+    x: -6,
+    y: 6,
+    z: 100,
+    ease: "Power0.inOut",
+    direction: 2000,
+  });
+  const buildingGasp: gsap.core.Tween = gsap.to(buildingModel.position, {
+    x: 0,
+    y: -20,
+    z: 0,
+    ease: "Power0.inOut",
+    direction: 2000,
+  });
+  const delayedCall: Promise<unknown> = new Promise((resolve) => {
+    gsap.delayedCall(1, resolve);
+  });
+  // 当所有动画执行完成时的操作
+  Promise.all([cameraGasp, buildingGasp, delayedCall])
+    .then(() => {
+      controls.maxPolarAngle = Math.PI / 2 - 0.01;
+      elementStatus.quitButton = true;
+      controls.autoRotate = true;
+      addPointWithModel();
+    })
+    .catch((err) => {
+      console.log(err);
+    });
+};
+// 给模型添加标点
+const addPointWithModel = (): void => {
+  const pointGroup: THREE.Group = new THREE.Group();
+  const pointArr: PointType[] = [
+    { x: -16.957232219719256, y: -16.365680438866374, z: 1.4609834047707086 },
+    { x: 4.703262994545068, y: -10.211088624240904, z: 10.20591033518526 },
+  ];
+  const circleTexture: THREE.Texture = textureLoader.load(getAssetsFile('building/sprite.png'));
+  pointArr.forEach((item: PointType) => {
+    const spriteMaterial: THREE.SpriteMaterial = new THREE.SpriteMaterial({
+      map: circleTexture
+    });
+    const sprite: THREE.Sprite = new THREE.Sprite(spriteMaterial);
+    sprite.position.set(item.x, item.y, item.z + 1.4);
+    sprite.scale.set(1, 1, 1);
+
+    pointGroup.add(sprite);
+  });
+  scene.add(pointGroup);
+};
+// 退出探索模型
+const quitExporarModel = (): void => {
+  gsap.to(camera.position, {
+    x: -24,
+    y: -30,
+    z: 48,
+    ease: "Power0.inOut",
+    duration: 1,
+  });
+  gsap.to(buildingModel.position, {
+    x: -6,
+    y: -59,
+    z: 18,
+    ease: "Power0.inOut",
+    duration: 1,
+  });
+  controls.maxPolarAngle = Math.PI;
+  canvas.value.style.zIndex = -1;
+  elementStatus.quitButton = false;
+  controls.autoRotate = false;
+};
+// 获取模型点击位置坐标
+const catchClickModelPos = (event: any): void => {
+  if (!elementStatus.quitButton) return;
+  // 创建射线
+  const raycaster = new THREE.Raycaster();
+  // 创建鼠标向量
+  const mouse = new THREE.Vector2();
+  // 计算鼠标点击位置的归一化设备坐标（NDC）
+  // NDC 坐标系的范围是 [-1, 1]，左下角为 (-1, -1)，右上角为 (1, 1)
+  if (!canvas.value) return;
+  mouse.x = (event.clientX / canvas.value.clientWidth) * 2 - 1;
+  mouse.y = -(event.clientY / canvas.value.clientHeight) * 2 + 1;
+
+  // 更新射线的起点和方向
+  raycaster.setFromCamera(mouse, camera);
+
+  // 计算射线与场景中的所有物体相交
+  const intersects = raycaster.intersectObjects(scene.children, true);
+
+  // 如果存在相交点，则获取第一个相交点的坐标
+  if (intersects.length > 0) {
+    const point = intersects[0].point;
+    console.log("Intersection point:", point);
+  }
+};
+
+// 监听鼠标点击事件
+window.addEventListener("click", catchClickModelPos, false);
 
 window.addEventListener("resize", () => {
   // 更新摄像机
@@ -478,7 +626,7 @@ window.addEventListener("resize", () => {
       position: absolute;
       left: 40%;
       top: 50%;
-      transform: translateY(-50%);
+      transform: translateY(-50%) scale(1);
       width: 14%;
       color: #c6c0be;
       img {
@@ -502,20 +650,67 @@ window.addEventListener("resize", () => {
       width: 100vw;
       height: 100vh;
       background-color: #2c242efa;
-      opacity: .8;
+      opacity: 0.8;
+    }
+    .my-blog,
+    .juejin {
+      font-size: 36px;
+      font-weight: bold;
+      font-family: "Archivo";
     }
     .my-blog {
       position: absolute;
-      top: 30%;
-      left: 20%;
+      top: 40%;
+      left: 10%;
       color: #ffffff;
     }
     .juejin {
       position: absolute;
-      bottom: 30%;
-      right: 20%;
+      bottom: 40%;
+      right: 10%;
       color: #d2a884;
     }
+    .explorar {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(1);
+      width: 160px;
+      height: 160px;
+      line-height: 50px;
+      text-align: center;
+      border-radius: 100%;
+      background-color: #ffffff;
+      font-family: "Archivo";
+      color: #000000;
+      transition: 1.1s cubic-bezier(0.19, 1, 0.22, 1);
+      outline: 0;
+      &:hover {
+        transform: translate(-50%, -50%) scale(1.2);
+        cursor: pointer;
+      }
+    }
+  }
+}
+.quit {
+  position: absolute;
+  bottom: 4%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 70px;
+  height: 70px;
+  background-color: #ffffff;
+  color: #000000;
+  text-align: center;
+  font-size: 16px;
+  font-weight: bolder;
+  border-radius: 100%;
+  transition: 1.1s cubic-bezier(0.19, 1, 0.22, 1);
+  outline: 0;
+  z-index: 10;
+  &:hover {
+    transform: translateX(-50%) scale(1.2);
+    cursor: pointer;
   }
 }
 
@@ -641,29 +836,29 @@ window.addEventListener("resize", () => {
 @keyframes headerImageFadeEnter {
   0% {
     opacity: 0;
-    transform: scale(2) translateY(-50%);
+    transform: translateY(-50%) scale(2);
   }
   50% {
     opacity: 0.5;
-    transform: scale(1.5) translateY(-50%);
+    transform: translateY(-50%) scale(1.5);
   }
   100% {
     opacity: 1;
-    transform: scale(1) translateY(-50%);
+    transform: translateY(-50%) scale(1);
   }
 }
 @keyframes headerImageFadeLeave {
   0% {
     opacity: 1;
-    transform: scale(1) translateY(-50%);
+    transform: translateY(-50%) scale(1);
   }
   50% {
     opacity: 0.5;
-    transform: scale(1.5) translateY(-50%);
+    transform: translateY(-50%) scale(1.5);
   }
   100% {
     opacity: 0;
-    transform: scale(2) translateY(-50%);
+    transform: translateY(-50%) scale(2);
   }
 }
 .right-text-fade-enter-active {
@@ -697,7 +892,75 @@ window.addEventListener("resize", () => {
   }
   100% {
     opacity: 0;
-    transform: -10%;
+    right: -10%;
+  }
+}
+.a-left-text-fade-enter-active {
+  animation: aLeftTextFadeEnter 1s linear 0s;
+}
+.a-left-text-fade-leave-active {
+  animation: aLeftTextFadeLeave 1s linear 0s;
+}
+@keyframes aLeftTextFadeEnter {
+  0% {
+    opacity: 0;
+    left: -10%;
+  }
+  50% {
+    opacity: 0.5;
+    left: 0%;
+  }
+  100% {
+    opacity: 1;
+    left: 10%;
+  }
+}
+@keyframes aLeftTextFadeLeave {
+  0% {
+    opacity: 1;
+    left: 10%;
+  }
+  50% {
+    opacity: 0.5;
+    left: 0%;
+  }
+  100% {
+    opacity: 0;
+    left: -10%;
+  }
+}
+.a-right-text-fade-enter-active {
+  animation: aRightTextFadeEnter 1s linear 0s;
+}
+.a-right-text-fade-leave-active {
+  animation: aRightTextFadeLeave 1s linear 0s;
+}
+@keyframes aRightTextFadeEnter {
+  0% {
+    opacity: 0;
+    right: -10%;
+  }
+  50% {
+    opacity: 0.5;
+    right: 0%;
+  }
+  100% {
+    opacity: 1;
+    right: 10%;
+  }
+}
+@keyframes aLeftTextFadeLeave {
+  0% {
+    opacity: 1;
+    right: 10%;
+  }
+  50% {
+    opacity: 0.5;
+    right: 0%;
+  }
+  100% {
+    opacity: 0;
+    right: -10%;
   }
 }
 </style>
