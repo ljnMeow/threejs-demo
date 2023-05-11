@@ -116,6 +116,7 @@ type PointType = {
   x: number;
   y: number;
   z: number;
+  ware?: boolean;
 };
 
 const canvas = ref<any>(null); // 画布
@@ -140,6 +141,8 @@ let stats: any;
 
 let buildingModel: THREE.Group; // 建筑模型
 let originalModelPos = ref<THREE.Vector3>(new THREE.Vector3(0, 0, 0));
+const pointGroup: THREE.Group = new THREE.Group(); // 标点
+pointGroup.name = "pointGroup";
 
 const manager = new THREE.LoadingManager(); // 加载器管理器
 const textureLoader: THREE.TextureLoader = new THREE.TextureLoader(manager); // 纹理加载器
@@ -285,7 +288,7 @@ const initControls = (): void => {
   controls = new OrbitControls(camera, renderer.domElement);
 
   // 控制器是否相应
-  controls.enabled = true;
+  controls.enabled = false;
   // 使动画循环使用时阻尼或自转 意思是否有惯性
   controls.enableDamping = true;
   // 是否可以缩放
@@ -310,6 +313,34 @@ const render = (): void => {
 
   controls.update();
   renderer.render(scene, camera);
+
+  // 涟漪动画
+  const pointGroup = scene.children.find((item) => item.name === "pointGroup");
+  if (pointGroup) {
+    const wave: any =
+      pointGroup.children.length &&
+      pointGroup.children.find((sprite) => sprite.name === "wave");
+    if (wave) {
+      wave._s += 0.01;
+      wave.scale.set(
+        wave.size * wave._s,
+        wave.size * wave._s,
+        wave.size * wave._s
+      );
+      if (wave._s <= 1.5) {
+        //mesh._s=1，透明度=0 mesh._s=1.5，透明度=1
+        wave.material.opacity = (wave._s - 1) * 2;
+      } else if (wave._s > 1.5 && wave._s <= 2) {
+        //mesh._s=1.5，透明度=1 mesh._s=2，透明度=0
+        wave.material.opacity = 1 - (wave._s - 1.5) * 2;
+      } else {
+        wave._s = 1.0;
+      }
+    }
+  }
+  if (elementStatus.quitButton) {
+    spriteVisible();
+  }
 
   requestAnimationFrame(render);
 };
@@ -454,16 +485,16 @@ const explorarModel = (): void => {
   const cameraGasp: gsap.core.Tween = gsap.to(camera.position, {
     x: -6,
     y: 6,
-    z: 100,
+    z: 80,
     ease: "Power0.inOut",
-    direction: 2000,
+    duration: 2,
   });
   const buildingGasp: gsap.core.Tween = gsap.to(buildingModel.position, {
     x: 0,
-    y: -20,
+    y: -22,
     z: 0,
     ease: "Power0.inOut",
-    direction: 2000,
+    duration: 2,
   });
   const delayedCall: Promise<unknown> = new Promise((resolve) => {
     gsap.delayedCall(1, resolve);
@@ -471,9 +502,12 @@ const explorarModel = (): void => {
   // 当所有动画执行完成时的操作
   Promise.all([cameraGasp, buildingGasp, delayedCall])
     .then(() => {
-      controls.maxPolarAngle = Math.PI / 2 - 0.01;
       elementStatus.quitButton = true;
+      controls.enabled = true;
+      controls.maxPolarAngle = Math.PI / 2 - 0.01;
       controls.autoRotate = true;
+      controls.minDistance = 40;
+      controls.maxDistance = 86;
       addPointWithModel();
     })
     .catch((err) => {
@@ -482,19 +516,49 @@ const explorarModel = (): void => {
 };
 // 给模型添加标点
 const addPointWithModel = (): void => {
-  const pointGroup: THREE.Group = new THREE.Group();
   const pointArr: PointType[] = [
-    { x: -16.957232219719256, y: -16.365680438866374, z: 1.4609834047707086 },
-    { x: 4.703262994545068, y: -10.211088624240904, z: 10.20591033518526 },
+    { x: -16.979381448617573, y: -19.167911412787436, z: 1.4417293738365617 },
+    { x: 4.368890112320235, y: -12.020210823358955, z: 10.590562296036955 },
+    {
+      x: -4.655517564465063,
+      y: 12.146541899849993,
+      z: 11.879293977258593,
+      ware: true,
+    },
   ];
-  const circleTexture: THREE.Texture = textureLoader.load(getAssetsFile('building/sprite.png'));
+  const circleTexture: THREE.Texture = textureLoader.load(
+    getAssetsFile("building/sprite.png")
+  );
+  const waveTexture: THREE.Texture = textureLoader.load(
+    getAssetsFile("wave.png")
+  );
   pointArr.forEach((item: PointType) => {
     const spriteMaterial: THREE.SpriteMaterial = new THREE.SpriteMaterial({
-      map: circleTexture
+      map: circleTexture,
     });
     const sprite: THREE.Sprite = new THREE.Sprite(spriteMaterial);
-    sprite.position.set(item.x, item.y, item.z + 1.4);
-    sprite.scale.set(1, 1, 1);
+    sprite.name = "point";
+    sprite.position.set(item.x, item.y, item.z + 2);
+    sprite.scale.set(1.4, 1.4, 1);
+
+    if (item.ware) {
+      const waveMaterial: THREE.SpriteMaterial = new THREE.SpriteMaterial({
+        map: waveTexture,
+        color: new THREE.Color("rgb(255, 255, 255)"),
+        transparent: true,
+        opacity: 1.0,
+        side: THREE.DoubleSide,
+        depthWrite: false,
+      });
+      let waveSprite: THREE.Sprite = new THREE.Sprite(waveMaterial);
+      waveSprite.name = "wave";
+      (waveSprite as any).size = 8 * 0.3;
+      (waveSprite as any)._s = Math.random() * 1.0 + 1.0;
+
+      waveSprite.position.set(item.x, item.y, item.z + 2);
+
+      pointGroup.add(waveSprite);
+    }
 
     pointGroup.add(sprite);
   });
@@ -502,6 +566,15 @@ const addPointWithModel = (): void => {
 };
 // 退出探索模型
 const quitExporarModel = (): void => {
+  scene.remove(pointGroup);
+  canvas.value.style.zIndex = -1;
+  elementStatus.quitButton = false;
+  controls.maxPolarAngle = Math.PI;
+  controls.enabled = false;
+  controls.autoRotate = false;
+  controls.minDistance = 0;
+  controls.maxDistance = Infinity;
+
   gsap.to(camera.position, {
     x: -24,
     y: -30,
@@ -516,16 +589,22 @@ const quitExporarModel = (): void => {
     ease: "Power0.inOut",
     duration: 1,
   });
-  controls.maxPolarAngle = Math.PI;
-  canvas.value.style.zIndex = -1;
-  elementStatus.quitButton = false;
-  controls.autoRotate = false;
+
+  gsap.to(controls.target, {
+    x: 0,
+    y: 0,
+    z: 0,
+    ease: "Power0.inOut",
+    duration: 1,
+  });
 };
-// 获取模型点击位置坐标
-const catchClickModelPos = (event: any): void => {
+// 检测鼠标与模型标点相交
+const detectionMouseIntersectPoint = (event: any): void => {
   if (!elementStatus.quitButton) return;
   // 创建射线
   const raycaster = new THREE.Raycaster();
+  // 将终点设置为固定的点
+  const rayEndpoint = new THREE.Vector3(0, 0, 0);
   // 创建鼠标向量
   const mouse = new THREE.Vector2();
   // 计算鼠标点击位置的归一化设备坐标（NDC）
@@ -536,19 +615,31 @@ const catchClickModelPos = (event: any): void => {
 
   // 更新射线的起点和方向
   raycaster.setFromCamera(mouse, camera);
+  // 将终点设置为距离相机100的位置
+  raycaster.ray.at(100, rayEndpoint);
 
-  // 计算射线与场景中的所有物体相交
-  const intersects = raycaster.intersectObjects(scene.children, true);
+  // 计算射线与场景中的所有标点相交
+  const intersects = raycaster.intersectObjects(pointGroup.children, true);
 
   // 如果存在相交点，则获取第一个相交点的坐标
   if (intersects.length > 0) {
-    const point = intersects[0].point;
-    console.log("Intersection point:", point);
+    const point = intersects[0].object.position;
+    console.log(point);
   }
+};
+// 判断模型是否遮挡精灵
+const spriteVisible = (): void => {
+  pointGroup.children && pointGroup.children.forEach(sprite => {
+    const cameraToSpriteRaycaster = new THREE.Raycaster(camera.position, sprite.position.clone().sub(camera.position).normalize());
+    const spriteToCameraRaycaster = new THREE.Raycaster(sprite.position, camera.position.clone().sub(sprite.position).normalize());
+    const cameraToSpriteIntersects = cameraToSpriteRaycaster.intersectObject(sprite);
+    const spriteToCameraIntersects = spriteToCameraRaycaster.intersectObject(scene, true);
+    console.log(cameraToSpriteIntersects.length > 0 && spriteToCameraIntersects.length > 0)
+  })
 };
 
 // 监听鼠标点击事件
-window.addEventListener("click", catchClickModelPos, false);
+// window.addEventListener("mousemove", detectionMouseIntersectPoint, false);
 
 window.addEventListener("resize", () => {
   // 更新摄像机
