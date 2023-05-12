@@ -116,6 +116,7 @@ type PointType = {
   x: number;
   y: number;
   z: number;
+  text?: string;
   ware?: boolean;
 };
 
@@ -517,13 +518,24 @@ const explorarModel = (): void => {
 // 给模型添加标点
 const addPointWithModel = (): void => {
   const pointArr: PointType[] = [
-    { x: -16.979381448617573, y: -19.167911412787436, z: 1.4417293738365617 },
-    { x: 4.368890112320235, y: -12.020210823358955, z: 10.590562296036955 },
+    {
+      x: -16.979381448617573,
+      y: -19.167911412787436,
+      z: 1.4417293738365617,
+      text: "aaaaa",
+    },
+    {
+      x: 4.368890112320235,
+      y: -12.020210823358955,
+      z: 10.590562296036955,
+      text: "bbbbb",
+    },
     {
       x: -4.655517564465063,
       y: 12.146541899849993,
       z: 11.879293977258593,
       ware: true,
+      text: "ccccc",
     },
   ];
   const circleTexture: THREE.Texture = textureLoader.load(
@@ -538,6 +550,7 @@ const addPointWithModel = (): void => {
     });
     const sprite: THREE.Sprite = new THREE.Sprite(spriteMaterial);
     sprite.name = "point";
+    (sprite as any).text = item.text;
     sprite.position.set(item.x, item.y, item.z + 2);
     sprite.scale.set(1.4, 1.4, 1);
 
@@ -552,6 +565,7 @@ const addPointWithModel = (): void => {
       });
       let waveSprite: THREE.Sprite = new THREE.Sprite(waveMaterial);
       waveSprite.name = "wave";
+      (waveSprite as any).text = item.text;
       (waveSprite as any).size = 8 * 0.3;
       (waveSprite as any)._s = Math.random() * 1.0 + 1.0;
 
@@ -562,6 +576,7 @@ const addPointWithModel = (): void => {
 
     pointGroup.add(sprite);
   });
+
   scene.add(pointGroup);
 };
 // 退出探索模型
@@ -629,13 +644,51 @@ const detectionMouseIntersectPoint = (event: any): void => {
 };
 // 判断模型是否遮挡精灵
 const spriteVisible = (): void => {
-  pointGroup.children && pointGroup.children.forEach(sprite => {
-    const cameraToSpriteRaycaster = new THREE.Raycaster(camera.position, sprite.position.clone().sub(camera.position).normalize());
-    const spriteToCameraRaycaster = new THREE.Raycaster(sprite.position, camera.position.clone().sub(sprite.position).normalize());
-    const cameraToSpriteIntersects = cameraToSpriteRaycaster.intersectObject(sprite);
-    const spriteToCameraIntersects = spriteToCameraRaycaster.intersectObject(scene, true);
-    console.log(cameraToSpriteIntersects.length > 0 && spriteToCameraIntersects.length > 0)
-  })
+  // 创建一个Raycaster对象
+  const raycaster = new THREE.Raycaster();
+  raycaster.camera = camera;
+
+  const spriteArr = pointGroup.children;
+
+  for (let i = 0; i < spriteArr.length; i++) {
+    const sprite = spriteArr[i];
+
+    // 将Sprite的位置作为射线的起点
+    const spritePosition = new THREE.Vector3().setFromMatrixPosition(
+      sprite.matrixWorld
+    );
+    const rayOrigin = spritePosition.clone();
+
+    // 将摄像机位置作为射线的终点
+    const cameraPosition = new THREE.Vector3().setFromMatrixPosition(
+      camera.matrixWorld
+    );
+    const rayDirection = cameraPosition.clone().sub(spritePosition).normalize();
+
+    // 设置射线的起点和方向
+    raycaster.set(rayOrigin, rayDirection);
+
+    // 检查是否存在与Sprite相交的物体
+    const intersects = raycaster.intersectObjects(scene.children, true);
+    let isOccluded = false;
+
+    for (let j = 0; j < intersects.length; j++) {
+      const intersection = intersects[j];
+      const object = intersection.object;
+      if (object !== sprite) {
+        // 当前相交对象不是Sprite，那Sprite被遮挡了
+        isOccluded = true;
+        break;
+      }
+    }
+
+    // 如果Sprite被遮挡了，将其隐藏
+    if (isOccluded) {
+      sprite.visible = false;
+    } else {
+      sprite.visible = true;
+    }
+  }
 };
 
 // 监听鼠标点击事件
