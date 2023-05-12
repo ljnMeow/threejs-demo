@@ -173,7 +173,7 @@ nextTick(() => {
   initScene();
   initCamera(canvas.value.clientWidth, canvas.value.clientHeight);
   initRenderer(canvas.value.clientWidth, canvas.value.clientHeight);
-  initAxesHelper();
+  // initAxesHelper();
   initControls();
   initStats();
   render();
@@ -243,7 +243,7 @@ const initLight = (): void => {
     5
   );
 
-  scene.add(ambientLight, directionalLight, directionalLightHelper);
+  scene.add(ambientLight, directionalLight);
 };
 // 加载建筑模型
 const loadBuildingModel = (): void => {
@@ -339,6 +339,7 @@ const render = (): void => {
       }
     }
   }
+
   if (elementStatus.quitButton) {
     spriteVisible();
   }
@@ -551,7 +552,7 @@ const addPointWithModel = (): void => {
     const sprite: THREE.Sprite = new THREE.Sprite(spriteMaterial);
     sprite.name = "point";
     (sprite as any).text = item.text;
-    sprite.position.set(item.x, item.y, item.z + 2);
+    sprite.position.set(item.x, item.y + 0.2, item.z + 2);
     sprite.scale.set(1.4, 1.4, 1);
 
     if (item.ware) {
@@ -569,7 +570,7 @@ const addPointWithModel = (): void => {
       (waveSprite as any).size = 8 * 0.3;
       (waveSprite as any)._s = Math.random() * 1.0 + 1.0;
 
-      waveSprite.position.set(item.x, item.y, item.z + 2);
+      waveSprite.position.set(item.x, item.y + 0.2, item.z + 2);
 
       pointGroup.add(waveSprite);
     }
@@ -648,7 +649,10 @@ const spriteVisible = (): void => {
   const raycaster = new THREE.Raycaster();
   raycaster.camera = camera;
 
-  const spriteArr = pointGroup.children;
+  const spriteArr: THREE.Object3D<THREE.Event>[] = [];
+  pointGroup.children.forEach((sprite) => {
+    spriteArr.push(sprite);
+  });
 
   for (let i = 0; i < spriteArr.length; i++) {
     const sprite = spriteArr[i];
@@ -669,13 +673,13 @@ const spriteVisible = (): void => {
     raycaster.set(rayOrigin, rayDirection);
 
     // 检查是否存在与Sprite相交的物体
-    const intersects = raycaster.intersectObjects(scene.children, true);
+    const intersects = raycaster.intersectObjects(buildingModel.children, true);
     let isOccluded = false;
 
     for (let j = 0; j < intersects.length; j++) {
       const intersection = intersects[j];
       const object = intersection.object;
-      if (object !== sprite) {
+      if (object !== sprite && object.name !== "Plane") {
         // 当前相交对象不是Sprite，那Sprite被遮挡了
         isOccluded = true;
         break;
@@ -684,15 +688,29 @@ const spriteVisible = (): void => {
 
     // 如果Sprite被遮挡了，将其隐藏
     if (isOccluded) {
-      sprite.visible = false;
+      gsap.to((sprite as THREE.Sprite).material, {
+        opacity: 0,
+        ease: "Power0.inOut",
+        duration: 0.5,
+        onComplete: () => {
+          sprite.visible = false
+        }
+      });
     } else {
-      sprite.visible = true;
+      gsap.to((sprite as THREE.Sprite).material, {
+        opacity: 1,
+        ease: "Power0.inOut",
+        duration: 0.5,
+        onComplete: () => {
+          sprite.visible = true
+        }
+      });
     }
   }
 };
 
 // 监听鼠标点击事件
-// window.addEventListener("mousemove", detectionMouseIntersectPoint, false);
+window.addEventListener("mousemove", detectionMouseIntersectPoint, false);
 
 window.addEventListener("resize", () => {
   // 更新摄像机
