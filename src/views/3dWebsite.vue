@@ -297,7 +297,7 @@ const initControls = (): void => {
   // 是否自动旋转
   controls.autoRotate = false;
   // 自转速度
-  controls.autoRotateSpeed = 0.5;
+  controls.autoRotateSpeed = 0.1;
   // 是否开启右键拖拽
   controls.enablePan = true;
   // 摄像机缩放的速度
@@ -639,10 +639,36 @@ const detectionMouseIntersectPoint = (event: any): void => {
 
   // 如果存在相交点，则获取第一个相交点的坐标
   if (intersects.length > 0) {
-    const point = intersects[0].object.position;
-    console.log(point);
+    const object = intersects[0].object;
+    addTipElementOrRemove(object, event, true);
+  } else {
+    addTipElementOrRemove(null, event, false);
   }
 };
+const addTipElementOrRemove = (object: THREE.Object3D<THREE.Event> | null, event: any, status: boolean):void => {
+  const tooltipElement: HTMLElement | null = document.getElementById('tooltip');
+  if(status && tooltipElement) return;
+  if(!tooltipElement && status) {
+    const tooltipDiv: HTMLElement = document.createElement('div')
+    tooltipDiv.innerHTML = object && (object as any).text;
+    tooltipDiv.setAttribute('id', 'tooltip');
+    tooltipDiv.style.position = 'absolute';
+    tooltipDiv.style.left = (event.clientX + 10) + 'px';
+    tooltipDiv.style.top = (event.clientY - 20) + 'px';
+    tooltipDiv.style.zIndex = '100';
+    tooltipDiv.style.padding = '4px 6px';
+    tooltipDiv.style.fontSize = '12px';
+    tooltipDiv.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+    tooltipDiv.style.border = '1px solid #ffffff';
+    tooltipDiv.style.borderRadius = '6px';
+
+    canvas.value.appendChild(tooltipDiv)
+  } else {
+    if(!status && tooltipElement) {
+      canvas.value.removeChild(tooltipElement)
+    }
+  }
+}
 // 判断模型是否遮挡精灵
 const spriteVisible = (): void => {
   // 创建一个Raycaster对象
