@@ -112,13 +112,21 @@ import { nextTick, ref, reactive } from "vue";
 import { getAssetsFile } from "../utils";
 import gsap from "gsap";
 
+type Info = {
+  text?: string;
+  otherScene?: boolean;
+  ware?: boolean;
+  size?: number;
+  _s?: number;
+};
+
 type PointType = {
   x: number;
   y: number;
   z: number;
-  text?: string;
-  ware?: boolean;
-};
+} & Info;
+
+type NewObject3d = THREE.Object3D<THREE.Event> & Info;
 
 const canvas = ref<any>(null); // 画布
 const scrollview = ref<any>(null); // 滚动视图
@@ -506,10 +514,10 @@ const explorarModel = (): void => {
     .then(() => {
       elementStatus.quitButton = true;
       controls.enabled = true;
-      controls.maxPolarAngle = Math.PI / 2 - 0.01;
-      controls.autoRotate = true;
-      controls.minDistance = 40;
-      controls.maxDistance = 86;
+      // controls.maxPolarAngle = Math.PI / 2 - 0.01;
+      // controls.autoRotate = true;
+      // controls.minDistance = 40;
+      // controls.maxDistance = 86;
       addPointWithModel();
     })
     .catch((err) => {
@@ -536,6 +544,7 @@ const addPointWithModel = (): void => {
       y: 12.146541899849993,
       z: 11.879293977258593,
       ware: true,
+      otherScene: true,
       text: "ccccc",
     },
   ];
@@ -549,9 +558,10 @@ const addPointWithModel = (): void => {
     const spriteMaterial: THREE.SpriteMaterial = new THREE.SpriteMaterial({
       map: circleTexture,
     });
-    const sprite: THREE.Sprite = new THREE.Sprite(spriteMaterial);
+    const sprite: THREE.Sprite & Info = new THREE.Sprite(spriteMaterial);
     sprite.name = "point";
-    (sprite as any).text = item.text;
+    sprite.text = item.text;
+    sprite.otherScene = item.otherScene;
     sprite.position.set(item.x, item.y + 0.2, item.z + 2);
     sprite.scale.set(1.4, 1.4, 1);
 
@@ -564,11 +574,12 @@ const addPointWithModel = (): void => {
         side: THREE.DoubleSide,
         depthWrite: false,
       });
-      let waveSprite: THREE.Sprite = new THREE.Sprite(waveMaterial);
+      let waveSprite: THREE.Sprite & Info = new THREE.Sprite(waveMaterial);
       waveSprite.name = "wave";
-      (waveSprite as any).text = item.text;
-      (waveSprite as any).size = 8 * 0.3;
-      (waveSprite as any)._s = Math.random() * 1.0 + 1.0;
+      waveSprite.text = item.text;
+      waveSprite.otherScene = item.otherScene;
+      waveSprite.size = 8 * 0.3;
+      waveSprite._s = Math.random() * 1.0 + 1.0;
 
       waveSprite.position.set(item.x, item.y + 0.2, item.z + 2);
 
@@ -615,7 +626,7 @@ const quitExporarModel = (): void => {
   });
 };
 // 检测鼠标与模型标点相交
-const detectionMouseIntersectPoint = (event: any): void => {
+const detectionMouseIntersectPoint = (event: any, isClick?: boolean): void => {
   if (!elementStatus.quitButton) return;
   // 创建射线
   const raycaster = new THREE.Raycaster();
@@ -639,36 +650,59 @@ const detectionMouseIntersectPoint = (event: any): void => {
 
   // 如果存在相交点，则获取第一个相交点的坐标
   if (intersects.length > 0) {
-    const object = intersects[0].object;
-    addTipElementOrRemove(object, event, true);
+    const object: NewObject3d = intersects[0].object;
+    // 获取标点在屏幕上的位置
+    const point = new THREE.Vector3().copy(object.position);
+    // 标点从三维空间投影到二维屏幕上
+    point.project(camera);
+    if (isClick) {
+      // 监听点击事件所执行逻辑
+      if (!object.otherScene) return;
+      goOtherScene(object);
+    } else {
+      addTipElementOrRemove(object, point, true);
+    }
   } else {
-    addTipElementOrRemove(null, event, false);
+    if (isClick) return;
+    addTipElementOrRemove(null, null, false);
   }
 };
-const addTipElementOrRemove = (object: THREE.Object3D<THREE.Event> | null, event: any, status: boolean):void => {
-  const tooltipElement: HTMLElement | null = document.getElementById('tooltip');
-  if(status && tooltipElement) return;
-  if(!tooltipElement && status) {
-    const tooltipDiv: HTMLElement = document.createElement('div')
-    tooltipDiv.innerHTML = object && (object as any).text;
-    tooltipDiv.setAttribute('id', 'tooltip');
-    tooltipDiv.style.position = 'absolute';
-    tooltipDiv.style.left = (event.clientX + 10) + 'px';
-    tooltipDiv.style.top = (event.clientY - 20) + 'px';
-    tooltipDiv.style.zIndex = '100';
-    tooltipDiv.style.padding = '4px 6px';
-    tooltipDiv.style.fontSize = '12px';
-    tooltipDiv.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
-    tooltipDiv.style.border = '1px solid #ffffff';
-    tooltipDiv.style.borderRadius = '6px';
+// 添加或移除提示信息框
+const addTipElementOrRemove = (
+  object: NewObject3d | null,
+  point: THREE.Vector3 | null,
+  status: boolean
+): void => {
+  const tooltipElement: HTMLElement | null = document.getElementById("tooltip");
+  // 状态是true并且元素已存在，就不再执行添加操作
+  if (status && tooltipElement) return;
+  // 状态是true并且元素不存在执行添加操作
+  if (!tooltipElement && status) {
+    const tooltipDiv: HTMLElement = document.createElement("div");
+    tooltipDiv.innerHTML = (object && object.text) || "";
+    tooltipDiv.setAttribute("id", "tooltip");
+    tooltipDiv.style.position = "absolute";
+    tooltipDiv.style.left = `${
+      point && ((point.x + 1) * canvas.value.clientWidth) / 2 + 10
+    }px`;
+    tooltipDiv.style.top = `${
+      point && ((-point.y + 1) * canvas.value.clientHeight) / 2 + 10
+    }px`;
+    tooltipDiv.style.zIndex = "100";
+    tooltipDiv.style.padding = "4px 6px";
+    tooltipDiv.style.fontSize = "12px";
+    tooltipDiv.style.backgroundColor = "rgba(0, 0, 0, 0.7)";
+    tooltipDiv.style.border = "1px solid #ffffff";
+    tooltipDiv.style.borderRadius = "6px";
 
-    canvas.value.appendChild(tooltipDiv)
+    canvas.value.appendChild(tooltipDiv);
   } else {
-    if(!status && tooltipElement) {
-      canvas.value.removeChild(tooltipElement)
+    // 状态为false并且元素存在执行移除操作
+    if (!status && tooltipElement) {
+      canvas.value.removeChild(tooltipElement);
     }
   }
-}
+};
 // 判断模型是否遮挡精灵
 const spriteVisible = (): void => {
   // 创建一个Raycaster对象
@@ -719,8 +753,8 @@ const spriteVisible = (): void => {
         ease: "Power0.inOut",
         duration: 0.5,
         onComplete: () => {
-          sprite.visible = false
-        }
+          sprite.visible = false;
+        },
       });
     } else {
       gsap.to((sprite as THREE.Sprite).material, {
@@ -728,15 +762,26 @@ const spriteVisible = (): void => {
         ease: "Power0.inOut",
         duration: 0.5,
         onComplete: () => {
-          sprite.visible = true
-        }
+          sprite.visible = true;
+        },
       });
     }
   }
 };
+// 点击前往第二个场景
+const goOtherScene = (object: NewObject3d): void => {
+  
+};
+
+// 监听鼠标移动事件
+window.addEventListener("mousemove", detectionMouseIntersectPoint, false);
 
 // 监听鼠标点击事件
-window.addEventListener("mousemove", detectionMouseIntersectPoint, false);
+window.addEventListener(
+  "click",
+  (event) => detectionMouseIntersectPoint(event, true),
+  false
+);
 
 window.addEventListener("resize", () => {
   // 更新摄像机
