@@ -95,10 +95,10 @@
   </div>
   <button
     class="quit"
-    @click="quitExporarModel"
+    @click="quitExporarModel(buttonText.key)"
     v-if="elementStatus.quitButton"
   >
-    quit
+    {{ buttonText.value }}
   </button>
 </template>
 
@@ -143,6 +143,7 @@ let scene: THREE.Scene; // 场景
 
 let camera: THREE.PerspectiveCamera; // 相机
 let cameraPostion: THREE.Vector3; // 相机位置
+let cameraFov: number = 45; // 相机广角
 
 let renderer: THREE.WebGLRenderer; // 渲染器
 let controls: any; // 控制器
@@ -152,6 +153,7 @@ let buildingModel: THREE.Group; // 建筑模型
 let originalModelPos = ref<THREE.Vector3>(new THREE.Vector3(0, 0, 0));
 const pointGroup: THREE.Group = new THREE.Group(); // 标点
 pointGroup.name = "pointGroup";
+const angle = ref(0);
 
 const manager = new THREE.LoadingManager(); // 加载器管理器
 const textureLoader: THREE.TextureLoader = new THREE.TextureLoader(manager); // 纹理加载器
@@ -175,13 +177,17 @@ const elementStatus = reactive({
   pageFourArightText: false,
   quitButton: false,
 });
+const buttonText = reactive({
+  key: 1,
+  value: "QUIT",
+});
 
 nextTick(() => {
   initScrollViewData();
   initScene();
   initCamera(canvas.value.clientWidth, canvas.value.clientHeight);
   initRenderer(canvas.value.clientWidth, canvas.value.clientHeight);
-  // initAxesHelper();
+  initAxesHelper();
   initControls();
   initStats();
   render();
@@ -213,7 +219,7 @@ const initScene = (): void => {
 };
 // 初始化相机
 const initCamera = (width: number, height: number): void => {
-  camera = new THREE.PerspectiveCamera(45, width / height, 1, 1000);
+  camera = new THREE.PerspectiveCamera(cameraFov, width / height, 1, 1000);
 
   cameraPostion = new THREE.Vector3(0, -13, 48);
   camera.position.copy(cameraPostion);
@@ -256,8 +262,6 @@ const initLight = (): void => {
 // 加载建筑模型
 const loadBuildingModel = (): void => {
   gltfLoader.load(getAssetsFile("building/building.glb"), (gltf) => {
-    gltf.scene.scale.set(0.05, 0.05, 0.05);
-
     originalModelPos.value = new THREE.Vector3(14, -40.8, 0);
 
     gltf.scene.position.copy(originalModelPos.value);
@@ -498,6 +502,22 @@ const explorarModel = (): void => {
     z: 80,
     ease: "Power0.inOut",
     duration: 2,
+    onUpdate: () => {
+      if (cameraFov < 50 && buttonText.key === 2) {
+        cameraFov -= 1;
+        camera.fov = cameraFov;
+        camera.updateProjectionMatrix();
+
+        elementStatus.quitButton = true;
+      }
+    },
+    onComplete: () => {
+      if(buttonText.key === 2) {
+        buttonText.key = 1;
+        buttonText.value = "QUIT";
+        elementStatus.quitButton = true;
+      }
+    }
   });
   const buildingGasp: gsap.core.Tween = gsap.to(buildingModel.position, {
     x: 0,
@@ -514,10 +534,10 @@ const explorarModel = (): void => {
     .then(() => {
       elementStatus.quitButton = true;
       controls.enabled = true;
-      // controls.maxPolarAngle = Math.PI / 2 - 0.01;
-      // controls.autoRotate = true;
-      // controls.minDistance = 40;
-      // controls.maxDistance = 86;
+      controls.maxPolarAngle = Math.PI / 2 - 0.01;
+      controls.autoRotate = true;
+      controls.minDistance = 40;
+      controls.maxDistance = 86;
       addPointWithModel();
     })
     .catch((err) => {
@@ -592,38 +612,44 @@ const addPointWithModel = (): void => {
   scene.add(pointGroup);
 };
 // 退出探索模型
-const quitExporarModel = (): void => {
-  scene.remove(pointGroup);
-  canvas.value.style.zIndex = -1;
-  elementStatus.quitButton = false;
-  controls.maxPolarAngle = Math.PI;
-  controls.enabled = false;
-  controls.autoRotate = false;
-  controls.minDistance = 0;
-  controls.maxDistance = Infinity;
+const quitExporarModel = (key: number): void => {
+  if (key === 1) {
+    scene.remove(pointGroup);
+    canvas.value.style.zIndex = -1;
+    elementStatus.quitButton = false;
+    controls.maxPolarAngle = Math.PI;
+    controls.enabled = false;
+    controls.autoRotate = false;
+    controls.minDistance = 0;
+    controls.maxDistance = Infinity;
 
-  gsap.to(camera.position, {
-    x: -24,
-    y: -30,
-    z: 48,
-    ease: "Power0.inOut",
-    duration: 1,
-  });
-  gsap.to(buildingModel.position, {
-    x: -6,
-    y: -59,
-    z: 18,
-    ease: "Power0.inOut",
-    duration: 1,
-  });
+    gsap.to(camera.position, {
+      x: -24,
+      y: -30,
+      z: 48,
+      ease: "Power0.inOut",
+      duration: 1,
+    });
+    gsap.to(buildingModel.position, {
+      x: -6,
+      y: -59,
+      z: 18,
+      ease: "Power0.inOut",
+      duration: 1,
+    });
 
-  gsap.to(controls.target, {
-    x: 0,
-    y: 0,
-    z: 0,
-    ease: "Power0.inOut",
-    duration: 1,
-  });
+    gsap.to(controls.target, {
+      x: 0,
+      y: 0,
+      z: 0,
+      ease: "Power0.inOut",
+      duration: 1,
+    });
+  } else if (key === 2) {
+    elementStatus.quitButton = false;
+    controls.target.set(0, 0, 0);
+    explorarModel();
+  }
 };
 // 检测鼠标与模型标点相交
 const detectionMouseIntersectPoint = (event: any, isClick?: boolean): void => {
@@ -655,12 +681,14 @@ const detectionMouseIntersectPoint = (event: any, isClick?: boolean): void => {
     const point = new THREE.Vector3().copy(object.position);
     // 标点从三维空间投影到二维屏幕上
     point.project(camera);
-    if (isClick) {
+    if (isClick && buttonText.key !== 2) {
       // 监听点击事件所执行逻辑
       if (!object.otherScene) return;
       goOtherScene(object);
     } else {
-      addTipElementOrRemove(object, point, true);
+      if(buttonText.key !== 2) {
+        addTipElementOrRemove(object, point, true);
+      }
     }
   } else {
     if (isClick) return;
@@ -770,7 +798,45 @@ const spriteVisible = (): void => {
 };
 // 点击前往第二个场景
 const goOtherScene = (object: NewObject3d): void => {
-  
+  controls.enabled = false;
+  controls.enableZoom = false;
+  controls.autoRotate = false;
+  controls.minDistance = 0;
+  controls.maxDistance = Infinity;
+
+  buildingModel.traverse((child) => {
+    if (child.name === "Area002") {
+      const newPosition = new THREE.Vector3();
+      child.updateMatrixWorld();
+
+      newPosition.setFromMatrixPosition(child.matrixWorld);
+
+      controls.target.set(newPosition.x, newPosition.y, newPosition.z);
+
+      elementStatus.quitButton = false;
+
+      gsap.to(camera.position, {
+        x: newPosition.x - 4,
+        y: newPosition.y + 2,
+        z: newPosition.z,
+        ease: "Power0.inOut",
+        duration: 1,
+        onUpdate: () => {
+          if (cameraFov < 50) {
+            cameraFov += 1;
+            camera.fov = cameraFov;
+            camera.updateProjectionMatrix();
+          }
+        },
+        onComplete: () => {
+          controls.enabled = true;
+          elementStatus.quitButton = true;
+          buttonText.key = 2;
+          buttonText.value = "OUT";
+        },
+      });
+    }
+  });
 };
 
 // 监听鼠标移动事件
@@ -935,7 +1001,7 @@ window.addEventListener("resize", () => {
   background-color: #ffffff;
   color: #000000;
   text-align: center;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: bolder;
   border-radius: 100%;
   transition: 1.1s cubic-bezier(0.19, 1, 0.22, 1);
