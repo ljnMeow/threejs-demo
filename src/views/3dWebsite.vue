@@ -212,9 +212,9 @@ nextTick(() => {
   initScene();
   initCamera(canvas.value.clientWidth, canvas.value.clientHeight);
   initRenderer(canvas.value.clientWidth, canvas.value.clientHeight);
-  initAxesHelper();
+  // initAxesHelper();
   initControls();
-  initStats();
+  // initStats();
   render();
   initLight();
   loadBuildingModel();
