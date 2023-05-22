@@ -1,4 +1,14 @@
 <template>
+  <transition name="loading">
+    <div class="loading" v-if="loading">
+      <div class="content">
+        <div class="box">
+          <div class="process" :style="{ width: `${process}%` }"></div>
+        </div>
+        <p>{{ `${process}%` }} Loading......</p>
+      </div>
+    </div>
+  </transition>
   <div id="canvas" ref="canvas"></div>
   <div
     class="website-view"
@@ -39,7 +49,7 @@
         <img
           v-if="elementStatus.pageThreeLeftImage"
           class="left-image"
-          src="https://realestate-neotix.vercel.app/assets/images/d620805693b8c555.jpg"
+          src="https://bu.dusays.com/2023/05/22/646b1f90b338e.jpeg"
           alt="image"
         />
       </transition>
@@ -182,6 +192,21 @@ const buttonText = reactive({
   value: "QUIT",
 });
 
+const process = ref<number>(0); // 加载进度
+const loading = ref<boolean>(true); // 加载中
+
+manager.onProgress = function (item, loaded, total) {
+  let value = loaded / total * 100
+  process.value = Math.ceil(value)
+
+  if(value === 100) {
+    setTimeout(() => {
+      loading.value = false
+      handingElementshow();
+    }, 1500)
+  }
+};
+
 nextTick(() => {
   initScrollViewData();
   initScene();
@@ -193,7 +218,6 @@ nextTick(() => {
   render();
   initLight();
   loadBuildingModel();
-  handingElementshow();
 });
 // 初始化滚动视图数据
 const initScrollViewData = (): void => {
@@ -512,12 +536,12 @@ const explorarModel = (): void => {
       }
     },
     onComplete: () => {
-      if(buttonText.key === 2) {
+      if (buttonText.key === 2) {
         buttonText.key = 1;
         buttonText.value = "QUIT";
         elementStatus.quitButton = true;
       }
-    }
+    },
   });
   const buildingGasp: gsap.core.Tween = gsap.to(buildingModel.position, {
     x: 0,
@@ -686,7 +710,7 @@ const detectionMouseIntersectPoint = (event: any, isClick?: boolean): void => {
       if (!object.otherScene) return;
       goOtherScene(object);
     } else {
-      if(buttonText.key !== 2) {
+      if (buttonText.key !== 2) {
         addTipElementOrRemove(object, point, true);
       }
     }
@@ -1260,6 +1284,63 @@ window.addEventListener("resize", () => {
   100% {
     opacity: 0;
     right: -10%;
+  }
+}
+
+
+.loading {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  background: #333333;
+  z-index: 100000;
+
+  .content {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 30%;
+  
+    .box {
+      width: 100%;
+      height: 30px;
+      background: #1e1d1d;
+      border-radius: 30px;
+      box-shadow: 0 0 4px 4px #ffffff3c;
+      overflow: hidden;
+
+      .process {
+        width: 0%;
+        height: 100%;
+        background-image: linear-gradient(45deg, #0a9798 0%, #0b75cf 100%);
+        transition: all 1s;
+      }
+    }
+
+    p {
+      padding-top: 10px;
+    }
+  } 
+}
+
+.loading-leave-active {
+  animation: loadingLeave 2s linear 0s;
+}
+@keyframes loadingLeave {
+  0% {
+    opacity: 1;
+    top: 0%;
+  }
+  50% {
+    opacity: 0.5;
+    top: -50%;
+  }
+  100% {
+    opacity: 0;
+    top: -100%;
   }
 }
 </style>
