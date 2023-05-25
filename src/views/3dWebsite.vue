@@ -196,7 +196,7 @@ const process = ref<number>(0); // 加载进度
 const loading = ref<boolean>(true); // 加载中
 
 manager.onProgress = function (item, loaded, total) {
-  let value = loaded / total * 100
+  let value = Math.round((loaded / total) * 100);
   process.value = Math.ceil(value)
 
   if(value === 100) {
@@ -237,7 +237,7 @@ const initScene = (): void => {
     getAssetsFile("sky/pz.jpg"),
     getAssetsFile("sky/nz.jpg"),
   ];
-  const cubeLoader: THREE.CubeTextureLoader = new THREE.CubeTextureLoader();
+  const cubeLoader: THREE.CubeTextureLoader = new THREE.CubeTextureLoader(manager);
   skyEnvMap = cubeLoader.load(skyBg);
   scene.background = skyEnvMap;
 };
