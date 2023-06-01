@@ -140,6 +140,7 @@ type NewObject3d = THREE.Object3D<THREE.Event> & Info;
 
 const canvas = ref<any>(null); // 画布
 const scrollview = ref<any>(null); // 滚动视图
+// 页面滚动数据
 const pageScrollingData = reactive({
   scrollviewHeight: 0, // 滚动视图高度
   pageHeight: 0, // 每页高度
@@ -176,6 +177,7 @@ dracoLoader.preload();
 const gltfLoader: GLTFLoader = new GLTFLoader(manager);
 gltfLoader.setDRACOLoader(dracoLoader);
 
+// 控制页面元素数据
 const elementStatus = reactive({
   pageOnetitle: false,
   pageOneStart: false,
@@ -197,13 +199,13 @@ const loading = ref<boolean>(true); // 加载中
 
 manager.onProgress = function (item, loaded, total) {
   let value = Math.round((loaded / total) * 100);
-  process.value = Math.ceil(value)
+  process.value = Math.ceil(value);
 
-  if(value === 100) {
+  if (value === 100) {
     setTimeout(() => {
-      loading.value = false
+      loading.value = false;
       handingElementshow();
-    }, 1500)
+    }, 1500);
   }
 };
 
@@ -221,14 +223,16 @@ nextTick(() => {
 });
 // 初始化滚动视图数据
 const initScrollViewData = (): void => {
+  // 每一页高度 = 浏览器窗口viewport的高度
   pageScrollingData.pageHeight = window.innerHeight;
+  // 滚动视图总高度 = 每页高度 * 总页数
   pageScrollingData.scrollviewHeight =
     pageScrollingData.pageHeight * pageScrollingData.totalPage;
 };
 // 初始化场景
 const initScene = (): void => {
   scene = new THREE.Scene();
-
+  // 天空图图片集合，指定顺序pos-x, neg-x, pos-y, neg-y, pos-z, neg-z
   const skyBg = [
     getAssetsFile("sky/px.jpg"),
     getAssetsFile("sky/nx.jpg"),
@@ -237,8 +241,11 @@ const initScene = (): void => {
     getAssetsFile("sky/pz.jpg"),
     getAssetsFile("sky/nz.jpg"),
   ];
-  const cubeLoader: THREE.CubeTextureLoader = new THREE.CubeTextureLoader(manager);
+  const cubeLoader: THREE.CubeTextureLoader = new THREE.CubeTextureLoader(
+    manager
+  );
   skyEnvMap = cubeLoader.load(skyBg);
+  // 设置场景背景
   scene.background = skyEnvMap;
 };
 // 初始化相机
@@ -256,6 +263,7 @@ const initRenderer = (width: number, height: number): void => {
     antialias: true, // 抗锯齿
   });
   renderer.setSize(width, height);
+  // 指定输出编码格式，当设置renderer.outputEncoding为sRGBEncoding时，渲染器会将输出的颜色值转换为sRGB格式，以便正确呈现在屏幕上
   renderer.outputEncoding = THREE.sRGBEncoding;
   canvas.value.appendChild(renderer.domElement);
   renderer.render(scene, camera);
@@ -267,29 +275,27 @@ const initAxesHelper = (): void => {
 };
 // 初始化灯光
 const initLight = (): void => {
+  // 环境光
   const ambientLight: THREE.AmbientLight = new THREE.AmbientLight(
     new THREE.Color("rgb(255, 255, 255)")
   );
-
+  // 平行光
   const directionalLight: THREE.DirectionalLight = new THREE.DirectionalLight(
     new THREE.Color("rgb(255, 99, 71)"),
-    2
+    2 // 光照强度为2
   );
   directionalLight.position.set(-220, 30, 50);
-  const directionalLightHelper = new THREE.DirectionalLightHelper(
-    directionalLight,
-    5
-  );
 
   scene.add(ambientLight, directionalLight);
 };
 // 加载建筑模型
 const loadBuildingModel = (): void => {
   gltfLoader.load(getAssetsFile("building/building.glb"), (gltf) => {
+    // 保存模型初始位置
     originalModelPos.value = new THREE.Vector3(14, -40.8, 0);
-
+    // 设置模型位置
     gltf.scene.position.copy(originalModelPos.value);
-
+    // 设置模型旋转角度
     const currentRotation = gltf.scene.rotation.clone();
     const newRotation = new THREE.Euler(
       currentRotation.x,
@@ -299,6 +305,7 @@ const loadBuildingModel = (): void => {
     );
     gltf.scene.rotation.copy(newRotation);
 
+    // 循环模型内Mesh并找到窗户所属的Mesh，设置该Mesh中材质的环境贴图以及环境贴图的强度
     const ObjectGroup = gltf.scene.children;
     for (let i = 0; i < ObjectGroup.length; i++) {
       if (
@@ -315,6 +322,7 @@ const loadBuildingModel = (): void => {
       }
     }
 
+    // 保存模型数据，后面设置动画会直接使用到
     buildingModel = gltf.scene;
 
     scene.add(buildingModel);
@@ -352,12 +360,14 @@ const render = (): void => {
   renderer.render(scene, camera);
 
   // 涟漪动画
-  const pointGroup = scene.children.find((item) => item.name === "pointGroup");
+  const pointGroup = scene.children.find((item) => item.name === "pointGroup"); // 查找标点组合
   if (pointGroup) {
+    // 组合存在
     const wave: any =
       pointGroup.children.length &&
-      pointGroup.children.find((sprite) => sprite.name === "wave");
+      pointGroup.children.find((sprite) => sprite.name === "wave"); // 找到涟漪精灵
     if (wave) {
+      // 修改精灵的大小和材质的透明度达到涟漪的效果
       wave._s += 0.01;
       wave.scale.set(
         wave.size * wave._s,
@@ -385,44 +395,56 @@ const render = (): void => {
 // 页面移动方向处理
 const pageTurning = (direction: boolean): void => {
   if (direction) {
+    // 往上滚动时，判断当前页码 + 1 是否 <= 总页码 ?？ 页码 + 1，执行页面滚动操作，
     if (pageScrollingData.currentPage + 1 <= pageScrollingData.totalPage) {
       pageScrollingData.currentPage += 1;
       pageMove(pageScrollingData.currentPage);
     }
   } else {
+    // 同样往下滚动时，判断当前页码 - 1 是否 > 0 ?? 页码 - 1，执行页面滚动操作
     if (pageScrollingData.currentPage - 1 > 0) {
       pageScrollingData.currentPage -= 1;
       pageMove(pageScrollingData.currentPage);
     }
   }
 };
-// 页面移动
+// 页面滚动
 const pageMove = (pageNo: number): void => {
+  // 设置滚动状态
   pageScrollingData.isScrolling = true;
+  // 计算滚动高度
   const scrollHeight = -(pageNo - 1) * pageScrollingData.pageHeight + "px";
+  // 设置css样式
   scrollview.value.style.transform = `translateY(${scrollHeight})`;
+  // 重新设置下当前页码
   pageScrollingData.currentPage = pageNo;
   handingScrolling();
+  // 定时器做一个防抖，避免一秒内多次触发
   setTimeout(() => {
     pageScrollingData.isScrolling = false;
-  }, 1000);
+  }, 1500);
 };
 // 鼠标滚轮滚动控制
 const mouseWheelHandle = (event: any): void | boolean => {
   const evt = event || window.event;
+  // 阻止默认事件
   if (evt.stopPropagation) {
     evt.stopPropagation();
   } else {
     evt.returnValue = false;
   }
+  // 当前正在滚动中则不做任何操作
   if (pageScrollingData.isScrolling) {
     return false;
   }
   const e = event.originalEvent || event;
+  // 记录滚动位置
   pageScrollingData.scrollPos = e.deltaY || e.detail;
   if (pageScrollingData.scrollPos > 0) {
+    // 当鼠标滚轮向上滚动时
     pageTurning(true);
   } else if (pageScrollingData.scrollPos < 0) {
+    // 当鼠标滚轮向下滚动时
     pageTurning(false);
   }
 };
@@ -433,18 +455,22 @@ const goNextPage = (): void => {
 };
 // 滚动时相机和模型动画
 const handingScrolling = (): void => {
+  // 判断是否滚动到最后一页，因为第3、4页模型的位置是不需要改变，也就是没有相对应地模型动画，所以当前页面是最后一页时，那么只能玩上滚动，并且需要执行第二页的模型动画
   const pos = pageScrollingData.ending
     ? 2 - 1
     : pageScrollingData.currentPage - 1;
+  // 计算新的模型位置
   const newModelPos: THREE.Vector3 =
     originalModelPos.value &&
     originalModelPos.value
       .clone()
       .add(new THREE.Vector3(pos * 10, pos * 8.6, pos * 13));
+  // 当前为第一页时，模型位置设置为初始值
   if (pageScrollingData.currentPage === 1) {
     newModelPos.copy(originalModelPos.value);
   }
   if (pageScrollingData.currentPage <= 2 || pageScrollingData.ending) {
+    // 当前页码 <= 第2页时 或者 页面滚动到最底部，执行该动画
     gsap.to(camera.position, {
       x: pos * 18,
       y: cameraPostion.y + pos * 14,
@@ -460,6 +486,7 @@ const handingScrolling = (): void => {
     });
     pageScrollingData.ending = false;
   } else if (pageScrollingData.currentPage === 5) {
+    // 当前页码 === 第5页时，执行该动画
     gsap.to(camera.position, {
       x: -24,
       y: -30,
@@ -475,6 +502,7 @@ const handingScrolling = (): void => {
     });
     pageScrollingData.ending = true;
   }
+  // 控制页面元素显示隐藏
   handingElementshow();
 };
 // 处理元素出现或隐藏
@@ -518,8 +546,10 @@ const handingElementshow = (): void => {
 };
 // 探索模型
 const explorarModel = (): void => {
+  // 设置三维容器层级
   canvas.value.style.zIndex = 1;
 
+  // 相机动画改变相机位置
   const cameraGasp: gsap.core.Tween = gsap.to(camera.position, {
     x: -6,
     y: 6,
@@ -527,6 +557,7 @@ const explorarModel = (): void => {
     ease: "Power0.inOut",
     duration: 2,
     onUpdate: () => {
+      // 因为在第二场景设置了相机的fov属性，所以这里需要将fov属性恢复到原来的状态
       if (cameraFov < 50 && buttonText.key === 2) {
         cameraFov -= 1;
         camera.fov = cameraFov;
@@ -543,6 +574,7 @@ const explorarModel = (): void => {
       }
     },
   });
+  // 模型动画改变模型位置
   const buildingGasp: gsap.core.Tween = gsap.to(buildingModel.position, {
     x: 0,
     y: -22,
@@ -550,18 +582,27 @@ const explorarModel = (): void => {
     ease: "Power0.inOut",
     duration: 2,
   });
+  // 控制器中心点
+  const controlsGasp: gsap.core.Tween = gsap.to(controls.target, {
+    x: 0,
+    y: 0,
+    z: 0,
+    ease: "Power0.inOut",
+    duration: 1,
+  });
+  // 等待执行
   const delayedCall: Promise<unknown> = new Promise((resolve) => {
     gsap.delayedCall(1, resolve);
   });
   // 当所有动画执行完成时的操作
-  Promise.all([cameraGasp, buildingGasp, delayedCall])
+  Promise.all([cameraGasp, buildingGasp, controlsGasp, delayedCall])
     .then(() => {
-      elementStatus.quitButton = true;
-      controls.enabled = true;
-      controls.maxPolarAngle = Math.PI / 2 - 0.01;
-      controls.autoRotate = true;
-      controls.minDistance = 40;
-      controls.maxDistance = 86;
+      elementStatus.quitButton = true; // 展示退出探索按钮
+      controls.enabled = true; // 开启控制器交互
+      controls.maxPolarAngle = Math.PI / 2 - 0.01; // 设置垂直旋转的角度的上限
+      controls.autoRotate = true; // 开启自动旋转
+      controls.minDistance = 40; // 设置相机向内移动上限
+      controls.maxDistance = 86; // 设置相机向外移动上限
       addPointWithModel();
     })
     .catch((err) => {
@@ -570,6 +611,7 @@ const explorarModel = (): void => {
 };
 // 给模型添加标点
 const addPointWithModel = (): void => {
+  // 标点数据
   const pointArr: PointType[] = [
     {
       x: -16.979381448617573,
@@ -587,17 +629,19 @@ const addPointWithModel = (): void => {
       x: -4.655517564465063,
       y: 12.146541899849993,
       z: 11.879293977258593,
-      ware: true,
-      otherScene: true,
-      text: "ccccc",
+      ware: true, // 是否展示涟漪动画
+      otherScene: true, // 是否可以前往下一个场景
+      text: "ccccc", // 弹框展示的文字
     },
   ];
+  // 贴图加载
   const circleTexture: THREE.Texture = textureLoader.load(
     getAssetsFile("building/sprite.png")
   );
   const waveTexture: THREE.Texture = textureLoader.load(
     getAssetsFile("wave.png")
   );
+  // 遍历标点数据创建精灵标点
   pointArr.forEach((item: PointType) => {
     const spriteMaterial: THREE.SpriteMaterial = new THREE.SpriteMaterial({
       map: circleTexture,
@@ -609,6 +653,7 @@ const addPointWithModel = (): void => {
     sprite.position.set(item.x, item.y + 0.2, item.z + 2);
     sprite.scale.set(1.4, 1.4, 1);
 
+    // 需要涟漪动画则要创建一个涟漪精灵
     if (item.ware) {
       const waveMaterial: THREE.SpriteMaterial = new THREE.SpriteMaterial({
         map: waveTexture,
@@ -638,15 +683,20 @@ const addPointWithModel = (): void => {
 // 退出探索模型
 const quitExporarModel = (key: number): void => {
   if (key === 1) {
+    // 探索模型处于第一个场景时
+    // 移除标点
     scene.remove(pointGroup);
+    // 设置三维容器层级
     canvas.value.style.zIndex = -1;
+    // 隐藏退出按钮
     elementStatus.quitButton = false;
+    // 把控制器一些参数设置回初始值
     controls.maxPolarAngle = Math.PI;
     controls.enabled = false;
     controls.autoRotate = false;
     controls.minDistance = 0;
     controls.maxDistance = Infinity;
-
+    // 执行动画操作
     gsap.to(camera.position, {
       x: -24,
       y: -30,
@@ -661,7 +711,6 @@ const quitExporarModel = (key: number): void => {
       ease: "Power0.inOut",
       duration: 1,
     });
-
     gsap.to(controls.target, {
       x: 0,
       y: 0,
@@ -670,13 +719,16 @@ const quitExporarModel = (key: number): void => {
       duration: 1,
     });
   } else if (key === 2) {
+    // 探索模型处于第二个场景时
     elementStatus.quitButton = false;
-    controls.target.set(0, 0, 0);
     explorarModel();
   }
 };
 // 检测鼠标与模型标点相交
-const detectionMouseIntersectPoint = (event: any, isClick?: boolean): void => {
+const detectionMouseIntersectPoint = (
+  event: any, // 鼠标事件参数
+  isClick?: boolean // 是否点击，用于判断是mousemove还是mouseclick
+): void => {
   if (!elementStatus.quitButton) return;
   // 创建射线
   const raycaster = new THREE.Raycaster();
@@ -705,6 +757,10 @@ const detectionMouseIntersectPoint = (event: any, isClick?: boolean): void => {
     const point = new THREE.Vector3().copy(object.position);
     // 标点从三维空间投影到二维屏幕上
     point.project(camera);
+    // 判断下如果标点是隐藏状态就不做任何操作
+    if (!object.visible) return;
+
+    // isClick判断是否是点击事件，buttonText.key判断当前在第一场景还是第二场景
     if (isClick && buttonText.key !== 2) {
       // 监听点击事件所执行逻辑
       if (!object.otherScene) return;
@@ -721,10 +777,11 @@ const detectionMouseIntersectPoint = (event: any, isClick?: boolean): void => {
 };
 // 添加或移除提示信息框
 const addTipElementOrRemove = (
-  object: NewObject3d | null,
-  point: THREE.Vector3 | null,
-  status: boolean
+  object: NewObject3d | null, // 鼠标拾取到的对象
+  point: THREE.Vector3 | null, // 对象在屏幕上的位置
+  status: boolean // 状态 添加true  移除false
 ): void => {
+  // 获取文档中ID为tooltip的元素
   const tooltipElement: HTMLElement | null = document.getElementById("tooltip");
   // 状态是true并且元素已存在，就不再执行添加操作
   if (status && tooltipElement) return;
@@ -761,25 +818,33 @@ const spriteVisible = (): void => {
   const raycaster = new THREE.Raycaster();
   raycaster.camera = camera;
 
+  // 精灵标点集合
   const spriteArr: THREE.Object3D<THREE.Event>[] = [];
   pointGroup.children.forEach((sprite) => {
     spriteArr.push(sprite);
   });
 
   for (let i = 0; i < spriteArr.length; i++) {
-    const sprite = spriteArr[i];
+    const sprite: THREE.Object3D<THREE.Event> = spriteArr[i];
 
     // 将Sprite的位置作为射线的起点
-    const spritePosition = new THREE.Vector3().setFromMatrixPosition(
-      sprite.matrixWorld
-    );
-    const rayOrigin = spritePosition.clone();
+    // 创建一个新的 Vector3 对象，然后使用 setFromMatrixPosition 方法将该对象设置为 Sprite 对象在世界坐标系下的位置
+    // 最终得到一个 Vector3 对象，表示了 Sprite 对象在世界坐标系下的位置。这个位置可以用于计算精灵与相机的相对位置，或者用于计算精灵的旋转方向
+    const spritePosition: THREE.Vector3 =
+      new THREE.Vector3().setFromMatrixPosition(sprite.matrixWorld);
+    const rayOrigin: THREE.Vector3 = spritePosition.clone();
 
     // 将摄像机位置作为射线的终点
-    const cameraPosition = new THREE.Vector3().setFromMatrixPosition(
-      camera.matrixWorld
-    );
-    const rayDirection = cameraPosition.clone().sub(spritePosition).normalize();
+    const cameraPosition: THREE.Vector3 =
+      new THREE.Vector3().setFromMatrixPosition(camera.matrixWorld);
+    // 计算spritePosition指向cameraPosition的单位向量代码
+    // ameraPosition.clone() 将 cameraPosition 对象进行克隆，得到一个新的 Vector3 对象。这么做是为了避免修改原始的 cameraPosition 对象
+    // sub(spritePosition) 将 spritePosition 对象从上一步得到的新的 Vector3 对象中减去，得到一个指向 spritePosition 的向量
+    // normalize()：将上一步得到的指向 spritePosition 的向量进行标准化，得到一个单位向量，即长度为 1 的向量
+    const rayDirection: THREE.Vector3 = cameraPosition
+      .clone()
+      .sub(spritePosition)
+      .normalize();
 
     // 设置射线的起点和方向
     raycaster.set(rayOrigin, rayDirection);
@@ -798,7 +863,7 @@ const spriteVisible = (): void => {
       }
     }
 
-    // 如果Sprite被遮挡了，将其隐藏
+    // 如果Sprite被遮挡了，将其隐藏，因为不能直接用gasp操作sprite.visible属性，所以只能改变opacity属性，并且当执行完成时需要隐藏精灵，要不然射线还会选到
     if (isOccluded) {
       gsap.to((sprite as THREE.Sprite).material, {
         opacity: 0,
@@ -822,12 +887,14 @@ const spriteVisible = (): void => {
 };
 // 点击前往第二个场景
 const goOtherScene = (object: NewObject3d): void => {
+  // 设置控制器属性
   controls.enabled = false;
   controls.enableZoom = false;
   controls.autoRotate = false;
   controls.minDistance = 0;
   controls.maxDistance = Infinity;
 
+  // 遍历建筑模型，找到第二场景的位置
   buildingModel.traverse((child) => {
     if (child.name === "Area002") {
       const newPosition = new THREE.Vector3();
@@ -835,10 +902,12 @@ const goOtherScene = (object: NewObject3d): void => {
 
       newPosition.setFromMatrixPosition(child.matrixWorld);
 
+      // 设置controls的中心点
       controls.target.set(newPosition.x, newPosition.y, newPosition.z);
 
       elementStatus.quitButton = false;
 
+      // 相机动画
       gsap.to(camera.position, {
         x: newPosition.x - 4,
         y: newPosition.y + 2,
@@ -846,6 +915,7 @@ const goOtherScene = (object: NewObject3d): void => {
         ease: "Power0.inOut",
         duration: 1,
         onUpdate: () => {
+          // 设置相机的广角
           if (cameraFov < 50) {
             cameraFov += 1;
             camera.fov = cameraFov;
@@ -1287,7 +1357,6 @@ window.addEventListener("resize", () => {
   }
 }
 
-
 .loading {
   position: fixed;
   top: 0;
@@ -1303,7 +1372,7 @@ window.addEventListener("resize", () => {
     top: 50%;
     transform: translate(-50%, -50%);
     width: 30%;
-  
+
     .box {
       width: 100%;
       height: 30px;
@@ -1323,7 +1392,7 @@ window.addEventListener("resize", () => {
     p {
       padding-top: 10px;
     }
-  } 
+  }
 }
 
 .loading-leave-active {
