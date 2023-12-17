@@ -215,7 +215,7 @@ const createModal = (path: string): void => {
       // 模型加载进度的回调函数
       loading.value = true
 
-      const percent = (xhr.loaded / xhr.total) * 100;
+      const percent = Math.min((xhr.loaded / xhr.total) * 100, 100);;
       console.log(`模型加载进度：${percent}%`)
       loadingText.value = `模型加载进度：${percent.toFixed(2)}%`
 
