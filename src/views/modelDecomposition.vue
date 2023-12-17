@@ -212,9 +212,6 @@ const createModal = (path: string): void => {
       scene.add(modelData);
     },
     (xhr) => {
-      // 模型加载进度的回调函数
-      loading.value = true
-
       const percent = Math.min((xhr.loaded / xhr.total) * 100, 100);;
       console.log(`模型加载进度：${percent}%`)
       loadingText.value = `模型加载进度：${percent.toFixed(2)}%`
@@ -223,6 +220,8 @@ const createModal = (path: string): void => {
         setTimeout(() => {
           loading.value = false
         }, 800)
+      } else {
+        loading.value = true
       }
     }
   );
