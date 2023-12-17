@@ -216,6 +216,7 @@ const createModal = (path: string): void => {
       loading.value = true
 
       const percent = (xhr.loaded / xhr.total) * 100;
+      console.log(percent)
       loadingText.value = `模型加载进度：${percent.toFixed(2)}%`
 
       if(percent === 100) {
