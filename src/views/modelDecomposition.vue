@@ -161,8 +161,10 @@ const initLight = (): void => {
 };
 
 const switchModel = (key: string) => {
+  // 查找模型路径
   const modelPath = modelPathArr[key as keyof typeof modelPathArr];
 
+  // 隐藏当前模型
   if (modelData) {
     modelData.visible = false;
   }
@@ -171,12 +173,12 @@ const switchModel = (key: string) => {
   let newModel = findReusableModel() as
     | (THREE.Group & { decomposition: boolean })
     | null;
-  // console.log(newModel)
   if (newModel) {
     // 重用可用的模型
     newModel.visible = true;
     modelData = newModel;
   } else {
+    // 查找不到就去加载新模型
     createModal(modelPath);
   }
 };
@@ -195,7 +197,7 @@ const createModal = (path: string): void => {
   gltfLoader.load(
     path,
     (gltf) => {
-      gltf.scene.rotateY(-0.2);
+      // 遍历模型中的所有对象
       gltf.scene.traverse((obj: THREE.Object3D) => {
         const mesh = obj as THREE.Object3D & {
           isMesh: boolean;
@@ -203,25 +205,30 @@ const createModal = (path: string): void => {
           fromPosition: THREE.Vector3;
           toPosition: THREE.Vector3;
         };
+        // 记录原位置、移动位置
         mesh.fromPosition = mesh.position.clone();
         mesh.toPosition = mesh.position.clone().multiplyScalar(3);
       });
+      // 储存模型数据
       modelData = gltf.scene as THREE.Group & { decomposition: boolean };
+      // 模型分解标识
       modelData.decomposition = false;
+      // 模型缓存，用于切换模型时不用重新加载模型，算是一种性能优化方式
       modelPool.push(modelData);
       scene.add(modelData);
     },
     (xhr) => {
-      const percent = Math.min((xhr.loaded / xhr.total) * 100, 100);;
-      console.log(`模型加载进度：${percent}%`)
-      loadingText.value = `模型加载进度：${percent.toFixed(2)}%`
+      // 获取模型加载进度
+      const percent = Math.min((xhr.loaded / xhr.total) * 100, 100);
+      console.log(`模型加载进度：${percent}%`);
+      loadingText.value = `模型加载进度：${percent.toFixed(2)}%`;
 
-      if(percent === 100) {
+      if (percent === 100) {
         setTimeout(() => {
-          loading.value = false
-        }, 800)
+          loading.value = false;
+        }, 800);
       } else {
-        loading.value = true
+        loading.value = true;
       }
     }
   );
