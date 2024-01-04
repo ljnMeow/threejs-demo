@@ -21,6 +21,11 @@ let routes = [
     name: "modelDecomposition",
     component: () => import(/* webpackChunkName: "modelDecomposition" */ '../views/modelDecomposition.vue'),
   },
+  {
+    path: "/sofaTextureChange",
+    name: "sofaTextureChange",
+    component: () => import(/* webpackChunkName: "sofaTextureChange" */ '../views/sofaTextureChange.vue'),
+  },
 ];
 
 const router = createRouter({
